@@ -396,26 +396,6 @@ userSchema.methods.comparePassword = function (
 /* Indexes                                                             */
 /* ------------------------------------------------------------------ */
 
-userSchema.index(
-  { email: 1 },
-  { unique: true }
-);
-
-userSchema.index(
-  { googleId: 1 },
-  { unique: true, sparse: true }
-);
-
-userSchema.index(
-  { facebookId: 1 },
-  { unique: true, sparse: true }
-);
-
-userSchema.index(
-  { appleId: 1 },
-  { unique: true, sparse: true }
-);
-
 userSchema.index({ phone: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });

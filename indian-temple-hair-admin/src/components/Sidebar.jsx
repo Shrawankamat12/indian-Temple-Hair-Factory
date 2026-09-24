@@ -90,15 +90,18 @@ const groups = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ open, onClose }) {
   return (
-    <aside className="admin-sidebar">
+    <aside className={`admin-sidebar${open ? ' open' : ''}`}>
       <div className="admin-brand">
         <img src="/logo.png" alt="Indian Temple Hair Exports" />
         <div className="admin-brand-text">
           <div className="name">Indian Temple Hair</div>
           <span className="tag">Admin Panel</span>
         </div>
+        <button type="button" className="admin-sidebar-close" onClick={onClose} aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
       </div>
       {groups.map((g) => (
         <div key={g.label}>

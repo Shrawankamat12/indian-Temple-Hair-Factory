@@ -22,10 +22,13 @@ exports.createOrderRules = [
   body('billingAddress.state').if(body('billingAddress').exists()).trim().notEmpty().withMessage('Billing state is required'),
   body('billingAddress.pincode').if(body('billingAddress').exists()).trim().notEmpty().withMessage('Billing pincode is required'),
 
+  // The storefront sends these nested ({ shipping: { method } }, { payment: { method } })
+  // rather than flat shippingMethod/paymentMethod — accept either shape.
   body('shippingMethod').optional().isIn(['standard', 'express']).withMessage('Invalid shipping method'),
+  body('shipping.method').optional().isIn(['standard', 'express']).withMessage('Invalid shipping method'),
   body('paymentMethod').optional().isIn(['card', 'upi', 'netbanking', 'wallet', 'cod']).withMessage('Invalid payment method'),
+  body('payment.method').optional().isIn(['card', 'upi', 'netbanking', 'wallet', 'cod']).withMessage('Invalid payment method'),
   body('couponCode').optional().trim(),
-  body('couponDiscount').optional().isFloat({ min: 0 }).withMessage('Coupon discount must be a positive number'),
   body('orderSource').optional().isIn(['Website', 'Admin', 'Mobile']).withMessage('Invalid order source'),
 ];
 

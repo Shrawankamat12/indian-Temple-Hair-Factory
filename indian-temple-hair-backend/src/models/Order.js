@@ -169,7 +169,6 @@ const orderSchema = new Schema(
         type: String,
         enum: ['pending', 'paid', 'failed', 'refunded', 'partially_refunded'],
         default: 'pending',
-        index: true,
       },
       transactionId: { type: String },
       razorpayOrderId: { type: String },
@@ -185,7 +184,7 @@ const orderSchema = new Schema(
         default: 'standard',
       },
       courierPartner: { type: String },
-      trackingNumber: { type: String, index: true },
+      trackingNumber: { type: String },
       awbNumber: { type: String },
       shipmentId: { type: String },
       shippingLabelUrl: { type: String },
@@ -281,8 +280,6 @@ orderSchema.pre('save', function (next) {
 /*  Indexes                                                             */
 /* ------------------------------------------------------------------ */
 
-orderSchema.index({ orderNumber: 1 }, { unique: true });
-orderSchema.index({ invoiceNumber: 1 }, { unique: true, sparse: true });
 orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ orderStatus: 1, createdAt: -1 });
 orderSchema.index({ 'payment.status': 1 });

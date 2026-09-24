@@ -13,10 +13,10 @@ exports.getStatus = asyncHandler(async (req, res) => {
 // Creates a Razorpay order against an existing (pending) ITRH order.
 exports.createRazorpayOrder = asyncHandler(async (req, res) => {
   const order = await orderService.getByIdOrOrderNumber(req.body.orderId);
-  if (order.paymentStatus === 'paid') throw new AppError('This order has already been paid', 400);
+  if (order.payment?.status === 'paid') throw new AppError('This order has already been paid', 400);
 
-  const rpOrder = await paymentService.createRazorpayOrder(order.total, order.orderNumber);
-  await orderService.updateById(order._id, { razorpayOrderId: rpOrder.id });
+  const rpOrder = await paymentService.createRazorpayOrder(order.pricing.grandTotal, order.orderNumber);
+  await orderService.updateById(order._id, { payment: { razorpayOrderId: rpOrder.id } });
 
   res.json({
     success: true,
@@ -39,11 +39,13 @@ exports.verifyRazorpayPayment = asyncHandler(async (req, res) => {
   paymentService.verifySignature({ razorpayOrderId, razorpayPaymentId, razorpaySignature });
 
   const order = await orderService.updateById(orderId, {
-    paymentStatus: 'paid',
-    status: 'confirmed',
-    razorpayOrderId,
-    razorpayPaymentId,
-    razorpaySignature,
+    payment: {
+      status: 'paid',
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+    },
+    orderStatus: 'confirmed',
   });
 
   res.json({ success: true, data: order });

@@ -1,5 +1,6 @@
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const { cloudinary, isConfigured } = require('../config/cloudinary');
 
 // Same public API as before: `upload.single('image')`. Internally picks
@@ -18,8 +19,20 @@ if (isConfigured) {
     },
   });
 } else {
+  // Local disk fallback. `src/uploads` is not guaranteed to exist (fresh
+  // clones, ephemeral filesystems on some hosts) — multer's diskStorage
+  // does NOT create the destination folder itself and fails with ENOENT
+  // if it's missing, so every upload silently errors out. Create it up
+  // front, and again defensively inside `destination` in case it gets
+  // wiped mid-run.
+  const uploadsDir = path.join(__dirname, '..', 'uploads');
+  fs.mkdirSync(uploadsDir, { recursive: true });
+
   storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'src/uploads'),
+    destination: (req, file, cb) => {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+      cb(null, uploadsDir);
+    },
     filename: (req, file, cb) => {
       const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
       cb(null, unique + path.extname(file.originalname));

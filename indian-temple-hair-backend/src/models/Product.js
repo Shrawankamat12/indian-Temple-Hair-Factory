@@ -6,7 +6,6 @@ const productSchema = new mongoose.Schema({
   sku: { type: String, required: true, unique: true },
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
   texture: { type: String },        // Straight, Body Wave, Deep Curly...
-  hairType: { type: String },       // Virgin, Remy, Raw
   length: { type: Number },         // inches
   color: { type: String },          // Natural Black, #613 Blonde, Ombre
   weight: { type: String, default: '100g' },

@@ -2,24 +2,33 @@ import { useRef, useState } from 'react';
 import { uploadImage } from '../../api/upload.api.js';
 import { Spinner } from './Feedback.jsx';
 import { resolveMediaUrl } from '../../lib/media.js';
+import { useToast } from './Feedback.jsx';
 
 /** Single-image uploader — used for logos, banners, category images, avatars. */
 export function SingleImageUpload({ value, onChange, label = 'Image', aspect = 'aspect-square', className = '', onUploadStateChange }) {
   const inputRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(value || '');
+  const toast = useToast();
 
   const pick = async (file) => {
     if (!file) return;
-    setPreview(URL.createObjectURL(file));
+    const localUrl = URL.createObjectURL(file);
+    setPreview(localUrl);
     setBusy(true);
     onUploadStateChange?.(true);
     try {
       const res = await uploadImage(file);
-      onChange(res?.url || res?.path || '');
-    } catch {
-      // upload endpoint not reachable in this environment — keep local preview so the form still works
-      onChange(preview);
+      const url = res?.url || res?.path;
+      if (!url) throw new Error('Upload response had no url');
+      setPreview(url);
+      onChange(url);
+    } catch (err) {
+      // Upload genuinely failed — do NOT pretend it succeeded. A blob: URL
+      // only lives in this browser tab, so saving it would silently break
+      // the image the moment the page is reloaded.
+      setPreview(value || '');
+      toast.error(err?.response?.data?.message || 'Image upload failed. Please try again.');
     } finally {
       setBusy(false);
       onUploadStateChange?.(false);
@@ -65,22 +74,26 @@ export function GalleryUpload({ images = [], onChange }) {
   const [busy, setBusy] = useState(false);
   const dragIndex = useRef(null);
   const [zoomed, setZoomed] = useState(null);
+  const toast = useToast();
 
   const addFiles = async (files) => {
     if (!files?.length) return;
     setBusy(true);
     const next = [...images];
+    let failCount = 0;
     for (const file of Array.from(files)) {
-      const localUrl = URL.createObjectURL(file);
       try {
         const res = await uploadImage(file);
-        next.push({ url: res?.url || res?.path || localUrl, isPrimary: next.length === 0 });
+        const url = res?.url || res?.path;
+        if (!url) throw new Error('Upload response had no url');
+        next.push({ url, isPrimary: next.length === 0 });
       } catch {
-        next.push({ url: localUrl, isPrimary: next.length === 0 });
+        failCount += 1;
       }
     }
     onChange(next);
     setBusy(false);
+    if (failCount) toast.error(`${failCount} image${failCount > 1 ? 's' : ''} failed to upload. Please try again.`);
   };
 
   const remove = (idx) => {
