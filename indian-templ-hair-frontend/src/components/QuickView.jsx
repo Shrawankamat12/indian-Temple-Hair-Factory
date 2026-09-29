@@ -4,6 +4,7 @@ import { FiX, FiHeart } from 'react-icons/fi';
 import PhotoBlock from './PhotoBlock';
 import StarRating from './StarRating';
 import { rupee } from '../lib/format';
+import { resolveImageUrl } from '../lib/api';
 import { useStore } from '../context/StoreContext';
 import { useCompare } from '../context/CompareContext';
 
@@ -20,46 +21,58 @@ export default function QuickView({ product, onClose }) {
   }, [product, onClose]);
 
   const open = !!product;
+  const onSale = product?.discountPct > 0;
 
   return (
     <>
-      <div className={`overlay-backdrop ${open ? 'open' : ''}`} onClick={onClose} />
-      <div className={`qv-modal ${open ? 'open' : ''}`} role="dialog" aria-modal="true" aria-label="Quick view">
+      <div className={`overlay-backdrop ${open ? 'open' : ''}`} onClick={onClose} aria-hidden="true" />
+      <div className={`qv-modal ${open ? 'open' : ''}`} role="dialog" aria-modal="true" aria-label="Quick view" aria-hidden={!open}>
         {product && (
           <>
-            <button className="qv-close" onClick={onClose} aria-label="Close quick view"><FiX /></button>
+            <button type="button" className="qv-close" onClick={onClose} aria-label="Close quick view"><FiX size={18} /></button>
             <div className="qv-grid">
               <div className="qv-media">
-                <PhotoBlock tone={product.tone} ratio="1/1" rounded={0} src={product.image} alt={product.name} />
-                {product.badge && <span className={`badge badge-${product.badge.toLowerCase().replace(/[^a-z]/g, '')}`} style={{ position: 'absolute', top: 16, left: 16 }}>{product.badge}</span>}
+                <PhotoBlock tone={product.tone} ratio="4/5" src={resolveImageUrl(product.image)} alt={product.name} />
+                <span className="pc-badges">
+                  {product.badge && <span className="badge badge-dark">{product.badge}</span>}
+                </span>
               </div>
               <div className="qv-body">
-                <span className="qv-variant-label">{product.hairType} · {product.texture}</span>
-                <h3 style={{ fontSize: '1.5rem' }}>{product.name}</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: 'rgba(23,19,15,0.6)' }}>
-                  <StarRating value={product.rating} /><span>{product.rating} ({product.reviews} reviews)</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  {product.discountPct > 0 && <span className="price-strike">{rupee(product.mrp)}</span>}
+                {(product.hairType || product.texture) && (
+                  <span className="qv-meta">{[product.hairType, product.texture].filter(Boolean).join(', ')}</span>
+                )}
+                <h3>{product.name}</h3>
+                {product.rating > 0 && (
+                  <div className="rating-row"><StarRating value={product.rating} /><span>{product.rating} ({product.reviews} reviews)</span></div>
+                )}
+                <div className="price-row">
                   <span className="price-now" style={{ fontSize: '1.5rem' }}>{rupee(product.price)}</span>
-                  {product.discountPct > 0 && <span className="badge badge-discount">-{product.discountPct}%</span>}
+                  {onSale && <span className="price-was">{rupee(product.mrp)}</span>}
+                  {onSale && <span className="price-off">-{product.discountPct}%</span>}
                 </div>
-                {product.description && <p style={{ color: 'rgba(23,19,15,0.62)', lineHeight: 1.6, fontSize: '0.92rem' }}>{product.description.slice(0, 180)}{product.description.length > 180 ? '…' : ''}</p>}
+                {product.description && (
+                  <p className="qv-meta" style={{ fontSize: '.92rem', lineHeight: 1.6 }}>
+                    {product.description.slice(0, 180)}{product.description.length > 180 ? '…' : ''}
+                  </p>
+                )}
 
-                <div className="pdp-qty" style={{ alignSelf: 'flex-start' }}>
-                  <button onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
-                  <span>{qty}</span>
-                  <button onClick={() => setQty((q) => q + 1)}>+</button>
+                <div className="qty" style={{ alignSelf: 'flex-start' }}>
+                  <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease quantity">−</button>
+                  <span className="qty-n" aria-live="polite">{qty}</span>
+                  <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity">+</button>
                 </div>
 
                 <div className="qv-actions">
-                  <button className="btn btn-gold" onClick={() => { addToCart(product, qty); onClose(); }}>Add to Cart</button>
-                  <button className={`pdp-wish-btn ${isWishlisted(product.id) ? 'active' : ''}`} onClick={() => toggleWishlist(product)} aria-label="Wishlist"><FiHeart /></button>
-                  <Link to={`/product/${product.id}`} className="btn btn-outline on-light" onClick={onClose}>Full Details</Link>
+                  <button type="button" className="btn btn-primary" onClick={() => { addToCart(product, qty); onClose(); }}>Add to cart</button>
+                  <button type="button" className="icon-btn" style={{ border: '1px solid #D9CBBB' }} aria-pressed={isWishlisted(product.id)}
+                    onClick={() => toggleWishlist(product)} aria-label="Toggle wishlist">
+                    <FiHeart size={18} fill={isWishlisted(product.id) ? 'currentColor' : 'none'} />
+                  </button>
+                  <Link to={`/product/${product.id}`} className="btn btn-outline" onClick={onClose}>Full details</Link>
                 </div>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--stone)', marginTop: 4 }}>
-                  <input type="checkbox" checked={isComparing(product.id)} onChange={() => toggleCompare(product)} style={{ accentColor: 'var(--gold)', width: 15, height: 15 }} />
+                <label className="check">
+                  <input type="checkbox" checked={isComparing(product.id)} onChange={() => toggleCompare(product)} />
                   Add to compare
                 </label>
               </div>

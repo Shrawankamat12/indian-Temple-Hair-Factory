@@ -6,7 +6,7 @@ const bannerSchema = new mongoose.Schema({
   image: { type: String, required: true },
   ctaText: { type: String },
   ctaLink: { type: String },
-  placement: { type: String, enum: ['home-hero', 'home-strip', 'shop-top', 'deal-of-day', 'category-top', 'popup'], default: 'home-hero' },
+  placement: { type: String, enum: ['home-hero', 'home-strip', 'shop-top', 'deal-of-day', 'category-top', 'popup', 'home-mid', 'offer-card', 'seasonal-offer'], default: 'home-hero' },
   order: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
 

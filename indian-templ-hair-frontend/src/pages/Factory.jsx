@@ -1,13 +1,13 @@
 import PageHeader from '../components/PageHeader';
 import PhotoBlock from '../components/PhotoBlock';
 import Reveal from '../components/Reveal';
+import SectionHeading from '../components/SectionHeading';
 import { processSteps, certifications, exportCountries } from '../data/content';
 import factorySorting from '../assets/photos/factory-sorting.jpg';
 import factoryWefting from '../assets/photos/factory-wefting.jpg';
-import factoryQc from '../assets/photos/factory-qc.jpg';
+import lengthInspection from '../assets/photos/cat-bulk.jpg';
 import factoryPacking from '../assets/photos/factory-packing.jpg';
 import factoryStorage from '../assets/photos/factory-storage.jpg';
-import factoryExport from '../assets/photos/factory-export.jpg';
 import wigShelf from '../assets/photos/wig-shelf.jpg';
 
 const factoryGallery = [
@@ -15,36 +15,36 @@ const factoryGallery = [
   { label: 'Hand-Sorting Floor', img: factorySorting },
   { label: 'Double-Drawing', img: wigShelf },
   { label: 'Wefting Studio', img: factoryWefting },
-  { label: 'QC Inspection Bay', img: factoryQc },
-  { label: 'Export Packing Line', img: factoryPacking, alt2: factoryExport },
+  { label: 'Length Inspection', img: lengthInspection },
+  { label: 'Export Packing Line', img: factoryPacking },
 ];
 
 export default function Factory() {
   return (
     <>
-      <PageHeader crumbs={[{ label: 'Factory' }]} title="Factory &amp; Manufacturing" lede="A transparent look at how raw hair becomes a finished, export-ready bundle." />
+      <PageHeader crumbs={[{ label: 'Factory' }]} title="Factory & Manufacturing" lede="A transparent look at how raw hair becomes a finished, export-ready bundle." />
 
       <Reveal as="section" className="section">
         <div className="container">
-          <div className="section-head"><span className="eyebrow">From Source to Shipment</span><h2 className="section-title">Our Manufacturing Process</h2></div>
-          <div className="process-row">
+          <SectionHeading title="Our manufacturing process" sub="From source to shipment." />
+          <ol className="steps-grid">
             {processSteps.map((s, i) => (
-              <div className="process-step" key={s.step}>
-                <span className="process-num">{String(i + 1).padStart(2, '0')}</span>
-                <h4>{s.step}</h4>
+              <li key={s.step}>
+                <span className="steps-grid-num num">{String(i + 1).padStart(2, '0')}</span>
+                <h3>{s.step}</h3>
                 <p>{s.desc}</p>
-              </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </Reveal>
 
-      <Reveal as="section" className="section factory-gallery-section">
+      <Reveal as="section" className="section section--alt">
         <div className="container">
-          <div className="section-head"><span className="eyebrow">Najafgarh Road, New Delhi</span><h2 className="section-title">Factory Tour Gallery</h2></div>
-          <div className="gallery-grid">
+          <SectionHeading title="Factory tour gallery" sub="Najafgarh Road, New Delhi." />
+          <div className="tour">
             {factoryGallery.map((g, i) => (
-              <PhotoBlock key={g.label} tone={['espresso','brown','gold','beige','cream','brown'][i]} ratio="4/3" rounded={16} label={g.label} src={g.img} alt={g.label} />
+              <PhotoBlock key={g.label} tone={['espresso', 'brown', 'gold', 'beige', 'cream', 'brown'][i]} ratio="4/3" rounded={4} label={g.label} src={g.img} alt={g.label} />
             ))}
           </div>
         </div>
@@ -52,20 +52,20 @@ export default function Factory() {
 
       <Reveal as="section" className="section">
         <div className="container">
-          <div className="section-head center"><span className="eyebrow">Trust &amp; Compliance</span><h2 className="section-title">Quality &amp; Certifications</h2></div>
-          <div className="cert-row">
-            {certifications.map((c) => <div className="cert-pill glass" key={c}>{c}</div>)}
-          </div>
+          <SectionHeading center title="Quality & certifications" rule />
+          <ul className="certs">
+            {certifications.map((c) => <li key={c}>{c}</li>)}
+          </ul>
         </div>
       </Reveal>
 
-      <Reveal as="section" className="section why-section">
+      <Reveal as="section" className="section section--dark">
         <div className="container">
-          <div className="section-head center"><span className="eyebrow">Worldwide Shipping</span><h2 className="section-title">Export Countries</h2></div>
-          <div className="export-countries">
-            {exportCountries.map((c) => <span className="export-chip" key={c}>{c}</span>)}
-            <span className="export-chip more">+ 38 more</span>
-          </div>
+          <SectionHeading center title="Export countries" sub="Worldwide shipping." />
+          <ul className="countries">
+            {exportCountries.map((c) => <li key={c}>{c}</li>)}
+            <li className="is-more">+ 38 more</li>
+          </ul>
         </div>
       </Reveal>
     </>

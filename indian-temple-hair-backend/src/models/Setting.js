@@ -11,6 +11,8 @@ const settingSchema = new mongoose.Schema({
   seoTitle: String, seoDescription: String, seoKeywords: String,
   // Shipping
   freeShippingThreshold: Number, flatShippingRate: Number, shippingZones: String,
+  // Used by GET /shipping/check when live courier serviceability is unavailable (shown to shoppers as an estimate)
+  deliveryMinDays: { type: Number, default: 3 }, deliveryMaxDays: { type: Number, default: 6 },
   // Payment
   paymentGateway: String, razorpayKey: String, codEnabled: { type: Boolean, default: true },
   // Tax

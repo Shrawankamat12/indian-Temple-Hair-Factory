@@ -1,10 +1,13 @@
-import { useParams, Link, Navigate } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import PhotoBlock from '../components/PhotoBlock';
+import SectionHeading from '../components/SectionHeading';
 import { BlockSkeleton, LineSkeleton } from '../components/Skeletons';
 import { ErrorState } from '../components/StateBlocks';
 import { useBlog, useBlogs } from '../hooks/useStoreData';
+import { resolveImageUrl } from '../lib/api';
 import NewsletterForm from '../components/NewsletterForm';
+import { BlogCard } from './BlogList';
 
 export default function BlogDetail() {
   const { id } = useParams();
@@ -14,7 +17,7 @@ export default function BlogDetail() {
   if (loading) {
     return (
       <div className="section">
-        <div className="container">
+        <div className="container container--narrow">
           <BlockSkeleton height={340} />
           <div style={{ marginTop: 24 }}><LineSkeleton width="70%" height={22} /></div>
         </div>
@@ -36,11 +39,11 @@ export default function BlogDetail() {
 
   return (
     <>
-      <PageHeader crumbs={[{ label: 'Journal', to: '/journal' }, { label: post.title }]} title={post.title} lede={`${post.cat} · ${post.date}`} />
+      <PageHeader crumbs={[{ label: 'Journal', to: '/journal' }, { label: post.title }]} title={post.title} lede={[post.cat, post.date].filter(Boolean).join(', ')} />
       <div className="section">
-        <div className="container">
-          <PhotoBlock tone="gold" ratio="21/9" rounded={22} label={post.cat} className="policy-content" src={post.img} alt={post.title} />
-          <div className="policy-content" style={{ marginTop: 30 }}>
+        <div className="container container--narrow">
+          <PhotoBlock tone="gold" ratio="21/9" rounded={4} src={resolveImageUrl(post.img)} alt={post.title} />
+          <article className="prose prose--article">
             {post.content ? (
               post.content.split('\n\n').map((para, i) => <p key={i}>{para}</p>)
             ) : (
@@ -49,31 +52,24 @@ export default function BlogDetail() {
                 <p>At our New Delhi facility, every claim we make about our hair is something our own QC team checks by hand before a bundle ever reaches a customer.</p>
               </>
             )}
-          </div>
-
-          {related.length > 0 && (
-            <>
-              <div className="section-head" style={{ marginTop: 60 }}><span className="eyebrow">Keep Reading</span><h2 className="section-title">Related Articles</h2></div>
-              <div className="blog-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
-                {related.map((b) => (
-                  <Link to={`/journal/${b.id}`} className="blog-card card" key={b.id}>
-                    <PhotoBlock tone="beige" ratio="16/10" rounded={0} label={b.cat} src={b.img} alt={b.title} />
-                    <div className="blog-card-body"><span className="eyebrow">{b.date}</span><h4>{b.title}</h4></div>
-                  </Link>
-                ))}
-              </div>
-            </>
-          )}
-
-          <div className="newsletter-section" style={{ borderRadius: 24, marginTop: 60 }}>
-            <div className="newsletter-inner" style={{ margin: '0 auto' }}>
-              <span className="eyebrow" style={{ color: 'var(--champagne)' }}>Stay In The Loop</span>
-              <h2 className="section-title" style={{ color: 'var(--cream)' }}>Get New Articles First</h2>
-              <NewsletterForm className="newsletter-form" />
-            </div>
-          </div>
+          </article>
         </div>
+
+        {related.length > 0 && (
+          <div className="container blog-related">
+            <SectionHeading title="Related articles" />
+            <div className="bgrid">{related.map((b) => <BlogCard key={b.id} post={b} />)}</div>
+          </div>
+        )}
       </div>
+
+      <section className="news">
+        <div className="container news-inner">
+          <h2>Get new articles first</h2>
+          <p>Hair care guides and wholesale advice, straight to your inbox.</p>
+          <NewsletterForm />
+        </div>
+      </section>
     </>
   );
 }

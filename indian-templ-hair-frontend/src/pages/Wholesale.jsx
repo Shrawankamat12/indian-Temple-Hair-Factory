@@ -1,15 +1,25 @@
 import { useState } from 'react';
+import { FiTrendingUp, FiTag, FiUser, FiCreditCard } from 'react-icons/fi';
 import PageHeader from '../components/PageHeader';
 import Reveal from '../components/Reveal';
+import SectionHeading from '../components/SectionHeading';
+import Button from '../components/Button';
 import { exportCountries } from '../data/content';
 import { wholesaleApi } from '../lib/resources';
 import { useStore } from '../context/StoreContext';
 
 const benefits = [
-  ['Factory-Direct Pricing', 'Skip resellers entirely and buy at the same rate our own distributors do.', 'M12 2v20M2 12h20'],
-  ['Private Labelling', 'Custom packaging and batch tagging available on qualifying orders.', 'M3 7h18v13H3z M8 7V4h8v3'],
-  ['Dedicated Account Manager', 'A single point of contact for reordering, documentation and shipping updates.', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M4 21a8 8 0 0 1 16 0'],
-  ['Flexible Payment Terms', 'LC, T/T and partial-advance terms available for established partners.', 'M2 8h20M2 8v10h20V8M6 15h4'],
+  [FiTag, 'Factory-Direct Pricing', 'Skip resellers entirely and buy at the same rate our own distributors do.'],
+  [FiTrendingUp, 'Private Labelling', 'Custom packaging and batch tagging available on qualifying orders.'],
+  [FiUser, 'Dedicated Account Manager', 'A single point of contact for reordering, documentation and shipping updates.'],
+  [FiCreditCard, 'Flexible Payment Terms', 'LC, T/T and partial-advance terms available for established partners.'],
+];
+
+const moq = [
+  ['Raw bundles', '25 kg', '7–10 days'],
+  ['Wefted extensions', '50 bundles', '10–14 days'],
+  ['Closures & frontals', '30 pieces', '10–14 days'],
+  ['Wigs', '20 pieces', '14–18 days'],
 ];
 
 const emptyForm = { businessName: '', contactName: '', email: '', phone: '', country: '', estimatedMOQ: '', requirement: '' };
@@ -32,7 +42,7 @@ export default function Wholesale() {
       setSent(true);
       setForm(emptyForm);
     } catch (err) {
-      showError(err, 'Could not submit your enquiry — please try again');
+      showError(err, 'Could not submit your enquiry, please try again');
     } finally {
       setSubmitting(false);
     }
@@ -40,60 +50,55 @@ export default function Wholesale() {
 
   return (
     <>
-      <PageHeader crumbs={[{ label: 'Export / Wholesale' }]} title="Export &amp; Wholesale Enquiry" lede="Bulk pricing, MOQs and export documentation for salons, distributors and importers." />
+      <PageHeader crumbs={[{ label: 'Export / Wholesale' }]} title="Export & Wholesale Enquiry" lede="Bulk pricing, MOQs and export documentation for salons, distributors and importers." />
 
       <Reveal as="section" className="section">
-        <div className="container wholesale-layout">
+        <div className="container wsale-layout">
           <div>
-            <div className="wholesale-benefits">
-              {benefits.map(([t, d, path]) => (
-                <div className="wholesale-benefit" key={t}>
-                  <div className="wholesale-benefit-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={path} /></svg>
-                  </div>
-                  <div><h4>{t}</h4><p>{d}</p></div>
-                </div>
+            <ul className="wsale-benefits">
+              {benefits.map(([Icon, t, d]) => (
+                <li key={t}>
+                  <span className="wsale-icon"><Icon size={18} aria-hidden="true" /></span>
+                  <div><h3>{t}</h3><p>{d}</p></div>
+                </li>
               ))}
-            </div>
+            </ul>
 
-            <h3 style={{ marginBottom: 6 }}>Minimum Order Quantities</h3>
+            <SectionHeading as="h2" title="Minimum order quantities" />
             <table className="moq-table">
-              <thead><tr><th>Product</th><th>MOQ</th><th>Lead Time</th></tr></thead>
+              <thead><tr><th scope="col">Product</th><th scope="col">MOQ</th><th scope="col">Lead time</th></tr></thead>
               <tbody>
-                <tr><td>Raw Bundles</td><td>25 kg</td><td>7–10 days</td></tr>
-                <tr><td>Wefted Extensions</td><td>50 bundles</td><td>10–14 days</td></tr>
-                <tr><td>Closures &amp; Frontals</td><td>30 pieces</td><td>10–14 days</td></tr>
-                <tr><td>Wigs</td><td>20 pieces</td><td>14–18 days</td></tr>
+                {moq.map(([p, q, l]) => <tr key={p}><td>{p}</td><td>{q}</td><td>{l}</td></tr>)}
               </tbody>
             </table>
 
-            <h3 style={{ margin: '30px 0 12px' }}>We Export To</h3>
-            <div className="export-countries">
-              {exportCountries.map((c) => <span className="export-chip" key={c}>{c}</span>)}
-              <span className="export-chip more">+ 38 more</span>
-            </div>
+            <SectionHeading as="h2" title="We export to" />
+            <ul className="countries countries--light">
+              {exportCountries.map((c) => <li key={c}>{c}</li>)}
+              <li className="is-more">+ 38 more</li>
+            </ul>
           </div>
 
           {sent ? (
-            <div className="card" style={{ padding: 30 }}>
-              <h3 style={{ marginBottom: 8 }}>Thank you!</h3>
-              <p>Your enquiry has been received — our export team will respond within 24 hours.</p>
-              <button className="btn btn-outline on-light btn-sm" style={{ marginTop: 16 }} onClick={() => setSent(false)}>Submit Another Enquiry</button>
+            <div className="card card-pad wsale-sent">
+              <h2>Thank you</h2>
+              <p>Your enquiry has been received. Our export team will respond within 24 hours.</p>
+              <Button variant="outline" size="sm" onClick={() => setSent(false)}>Submit another enquiry</Button>
             </div>
           ) : (
-            <form className="contact-form card" style={{ padding: 30 }} onSubmit={onSubmit}>
-              <h3 style={{ marginBottom: 6 }}>B2B Enquiry Form</h3>
-              <p style={{ fontSize: '0.85rem', color: 'rgba(23,19,15,0.55)', marginBottom: 10 }}>Our export team responds within 24 hours.</p>
-              <input placeholder="Company Name" required {...field('businessName')} />
-              <input placeholder="Contact Person" required {...field('contactName')} />
-              <input type="email" placeholder="Business Email" required {...field('email')} />
-              <input placeholder="Phone Number" required {...field('phone')} />
-              <input placeholder="Country" {...field('country')} />
-              <input placeholder="Estimated Order Volume (kg / pieces)" {...field('estimatedMOQ')} />
-              <textarea rows="4" placeholder="Tell us what you're looking for…" {...field('requirement')} />
-              <button type="submit" className="btn btn-gold" style={{ marginTop: 4 }} disabled={submitting}>
-                {submitting ? 'Submitting…' : 'Submit Enquiry'}
-              </button>
+            <form className="card card-pad" onSubmit={onSubmit}>
+              <h2>B2B enquiry form</h2>
+              <p className="wsale-form-lede">Our export team responds within 24 hours.</p>
+              <div className="form-grid">
+                <div className="field span-2"><label className="field-label" htmlFor="w-biz">Company name</label><input id="w-biz" className="input" required {...field('businessName')} /></div>
+                <div className="field"><label className="field-label" htmlFor="w-contact">Contact person</label><input id="w-contact" className="input" required {...field('contactName')} /></div>
+                <div className="field"><label className="field-label" htmlFor="w-email">Business email</label><input id="w-email" type="email" className="input" required {...field('email')} /></div>
+                <div className="field"><label className="field-label" htmlFor="w-phone">Phone number</label><input id="w-phone" type="tel" className="input" required {...field('phone')} /></div>
+                <div className="field"><label className="field-label" htmlFor="w-country">Country</label><input id="w-country" className="input" {...field('country')} /></div>
+                <div className="field span-2"><label className="field-label" htmlFor="w-moq">Estimated order volume (kg / pieces)</label><input id="w-moq" className="input" {...field('estimatedMOQ')} /></div>
+                <div className="field span-2"><label className="field-label" htmlFor="w-req">What are you looking for?</label><textarea id="w-req" className="textarea" rows="4" {...field('requirement')} /></div>
+              </div>
+              <Button type="submit" loading={submitting} className="wsale-submit">{submitting ? 'Submitting…' : 'Submit enquiry'}</Button>
             </form>
           )}
         </div>

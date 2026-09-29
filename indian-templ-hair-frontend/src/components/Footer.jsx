@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom';
-import { FiInstagram, FiFacebook, FiYoutube } from 'react-icons/fi';
-import { FaWhatsapp, FaPinterestP, FaTiktok, FaLinkedinIn } from 'react-icons/fa';
+import { Link, useLocation } from 'react-router-dom';
+import { FiInstagram, FiFacebook, FiYoutube, FiMapPin, FiMail, FiPhone } from 'react-icons/fi';
+import { FaWhatsapp, FaPinterestP, FaTiktok, FaLinkedinIn, FaCcVisa, FaCcMastercard, FaRupeeSign } from 'react-icons/fa';
 import { useSiteContent, useCompanyInfo } from '../hooks/useStoreData';
 import NewsletterForm from './NewsletterForm';
+import BrandMark from './BrandMark';
 
 function FooterLink({ url, children }) {
   if (!url) return <span>{children}</span>;
@@ -14,41 +15,17 @@ function FooterLink({ url, children }) {
   );
 }
 
+// Fallback columns only when the admin has not configured Footer → Columns.
 const DEFAULT_COLUMNS = [
-  {
-    title: 'Shop',
-    links: [
-      { label: 'Raw Hair', url: '/shop' },
-      { label: 'Extensions', url: '/shop' },
-      { label: 'Wigs', url: '/shop' },
-      { label: 'Closures & Frontals', url: '/shop' },
-      { label: 'Bulk Hair', url: '/shop' },
-    ],
-  },
-  {
-    title: 'Company',
-    links: [
-      { label: 'About Us', url: '/about' },
-      { label: 'Our Process', url: '/factory' },
-      { label: 'Wholesale', url: '/wholesale' },
-      { label: 'Journal', url: '/journal' },
-      { label: 'Contact', url: '/contact' },
-    ],
-  },
-  {
-    title: 'Customer Care',
-    links: [
-      { label: 'My Account', url: '/account' },
-      { label: 'FAQs', url: '/faq' },
-      { label: 'Shipping', url: '/policy/shipping' },
-      { label: 'Returns', url: '/policy/returns' },
-      { label: 'Privacy Policy', url: '/policy/privacy' },
-      { label: 'Terms', url: '/policy/terms' },
-    ],
-  },
+  { title: 'Shop', links: [{ label: 'All Products', url: '/shop' }, { label: 'Offers', url: '/shop?onSale=1' }] },
+  { title: 'Customer Care', links: [{ label: 'My Account', url: '/account' }, { label: 'FAQs', url: '/faq' }, { label: 'Contact', url: '/contact' }] },
+  { title: 'About Us', links: [{ label: 'Our Story', url: '/about' }, { label: 'Our Process', url: '/factory' }, { label: 'Wholesale', url: '/wholesale' }, { label: 'Journal', url: '/journal' }] },
+  { title: 'Policies', links: [
+    { label: 'Shipping Policy', url: '/policy/shipping' }, { label: 'Return & Refund', url: '/policy/returns' },
+    { label: 'Cancellation', url: '/policy/cancellation' }, { label: 'Privacy Policy', url: '/policy/privacy' }, { label: 'Terms', url: '/policy/terms' },
+  ] },
 ];
-
-const DEFAULT_TRUST_BADGES = ['100% Human Hair', 'Quality Checked', 'Ethically Sourced', 'Worldwide Shipping'];
+const DEFAULT_PAYMENTS = ['Visa', 'Mastercard', 'UPI', 'Cash on Delivery'];
 
 const SOCIAL_ICONS = [
   { key: 'instagram', label: 'Instagram', Icon: FiInstagram },
@@ -60,86 +37,110 @@ const SOCIAL_ICONS = [
   { key: 'tiktok', label: 'TikTok', Icon: FaTiktok },
 ];
 
+function PaymentChip({ label }) {
+  const l = label.toLowerCase();
+  if (l.includes('visa')) return <span className="pay pay-ico" title={label}><FaCcVisa size={30} aria-label={label} /></span>;
+  if (l.includes('master')) return <span className="pay pay-ico" title={label}><FaCcMastercard size={30} aria-label={label} /></span>;
+  if (l.includes('cod') || l.includes('cash')) return <span className="pay"><FaRupeeSign size={11} aria-hidden="true" />{label}</span>;
+  return <span className="pay">{label}</span>;
+}
+
+// WhatsApp link: a full URL from the admin, or wa.me built from a number.
+function whatsappHref(value, fallbackPhone) {
+  if (/^https?:\/\//i.test(value || '')) return value;
+  const digits = String(value || fallbackPhone || '').replace(/\D/g, '');
+  return digits ? `https://wa.me/${digits}` : '';
+}
+
 export default function Footer() {
   const { siteContent: sc } = useSiteContent();
   const { company } = useCompanyInfo();
+  const { pathname } = useLocation();
   const footer = sc?.footer || {};
   const columns = footer.columns?.length ? footer.columns : DEFAULT_COLUMNS;
-  const trustBadges = footer.trustBadges?.length ? footer.trustBadges : DEFAULT_TRUST_BADGES;
+  const payments = footer.paymentMethods?.length ? footer.paymentMethods : DEFAULT_PAYMENTS;
   const social = company.socialLinks;
-  const hasSocial = Object.values(social).some(Boolean);
-  const { brandDescription, address, email, phones, gst, contactPerson } = company;
+  const hasSocial = SOCIAL_ICONS.some((i) => social[i.key]);
+  const { brandDescription, address, email, phones } = company;
+  const waUrl = whatsappHref(social.whatsapp, phones[0]);
+  // The home page carries its own newsletter section.
+  const showNewsletter = pathname !== '/';
 
   return (
     <footer className="ftr">
-      <div className="ftr-newsletter">
-        <div className="container ftr-newsletter-inner">
-          <div>
-            <div className="ftr-newsletter-title">Stay in the loop</div>
-            <p className="ftr-newsletter-sub">New arrivals, styling edits and offers — straight to your inbox.</p>
-          </div>
-          <NewsletterForm className="ftr-newsletter-form" />
-        </div>
-      </div>
-
-      <div className="container ftr-top">
-        <div>
-          <span className="ftr-brand-name">{company.brandName}</span>
-          <p>{brandDescription}</p>
-          {hasSocial && (
-            <div className="ftr-social">
-              {SOCIAL_ICONS.map((item) => {
-                const url = social[item.key];
-                if (!url) return null;
-                const IconComp = item.Icon;
-                return (
-                  <a key={item.key} href={url} target="_blank" rel="noopener noreferrer" aria-label={item.label} title={item.label}>
-                    <IconComp size={14} />
-                  </a>
-                );
-              })}
+      {showNewsletter && (
+        <div className="ftr-news">
+          <div className="container ftr-news-inner">
+            <div>
+              <h2 className="ftr-news-title">Stay in the loop</h2>
+              <p className="ftr-news-sub">New arrivals, styling edits and offers, straight to your inbox.</p>
             </div>
-          )}
+            <NewsletterForm />
+          </div>
+        </div>
+      )}
+
+      <div className="container ftr-grid">
+        <div className="ftr-brand">
+          <Link to="/" aria-label="Home"><BrandMark tone="light" /></Link>
+          <p>{brandDescription}</p>
         </div>
 
         {columns.map((col) => (
-          <div className="ftr-col" key={col.title}>
-            <h5>{col.title}</h5>
+          <nav className="ftr-col" key={col.title} aria-label={col.title}>
+            <h3>{col.title}</h3>
             <ul>
               {(col.links || []).map((l) => (
                 <li key={l.label}><FooterLink url={l.url}>{l.label}</FooterLink></li>
               ))}
             </ul>
-          </div>
+          </nav>
         ))}
 
-        <div className="ftr-col">
-          <h5>Contact</h5>
-          <p className="ftr-address">{contactPerson}<br />{address}</p>
-          <p className="ftr-address"><a href={`mailto:${email}`}>{email}</a></p>
-          <p className="ftr-address">
-            {phones.map((phone) => {
-              const cleanPhone = phone.replace(/[\s()-]+/g, '');
-              return <span key={phone}><a href={`tel:${cleanPhone}`}>{phone}</a><br /></span>;
-            })}
-          </p>
-          {gst && <p className="ftr-address" style={{ marginBottom: 0 }}>GST: {gst}</p>}
+        <div className="ftr-col ftr-contact">
+          <h3>Connect With Us</h3>
+          {hasSocial && (
+            <div className="ftr-social">
+              {SOCIAL_ICONS.map(({ key, label, Icon }) => {
+                const url = key === 'whatsapp' ? waUrl : social[key];
+                if (!url) return null;
+                return (
+                  <a key={key} href={url} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}>
+                    <Icon size={16} />
+                  </a>
+                );
+              })}
+            </div>
+          )}
+          <address>
+            {address && <p><FiMapPin size={14} aria-hidden="true" /><span>{address}</span></p>}
+            {email && <p><FiMail size={14} aria-hidden="true" /><a href={`mailto:${email}`}>{email}</a></p>}
+            {phones.map((phone) => (
+              <p key={phone}><FiPhone size={14} aria-hidden="true" /><a href={`tel:${phone.replace(/[\s()-]+/g, '')}`}>{phone}</a></p>
+            ))}
+          </address>
         </div>
       </div>
 
-      <div className="container ftr-trust">
-        {trustBadges.map((badge, index) => (
-          <span key={badge}>
-            {badge}
-            {index < trustBadges.length - 1 ? <span className="dot"> · </span> : null}
-          </span>
-        ))}
+      <div className="container">
+        <div className="ftr-pay">
+          <span className="ftr-pay-label">We accept</span>
+          <div className="ftr-pay-row">{payments.map((p) => <PaymentChip key={p} label={p} />)}</div>
+        </div>
       </div>
 
-      <div className="container ftr-bottom">
-        <span>© {new Date().getFullYear()} {company.brandName}. All rights reserved.</span>
-        <span>{footer.bottomText || 'Shipped worldwide from New Delhi, India'}</span>
+      <div className="ftr-bottom">
+        <div className="container ftr-bottom-inner">
+          <span>© {new Date().getFullYear()} {company.brandName}. All rights reserved.</span>
+          <span>{footer.bottomText || 'Shipped worldwide from New Delhi, India'}</span>
+        </div>
       </div>
+
+      {waUrl && (
+        <a className="wa-float" href={waUrl} target="_blank" rel="noopener noreferrer" aria-label="Chat with us on WhatsApp">
+          <FaWhatsapp size={28} />
+        </a>
+      )}
     </footer>
   );
 }

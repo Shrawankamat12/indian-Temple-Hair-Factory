@@ -1,29 +1,18 @@
-import { useCompanyInfo } from '../hooks/useStoreData';
+import { DEFAULT_COMPANY } from '../data/companyInfo';
 
 /**
- * Shared brand wordmark — simple, editorial, typographic. No emblem
- * or icon shape; the brand name set in the display serif is the mark.
+ * Typographic wordmark. The brand name is split across two lines so the
+ * lock-up stays compact: "Indian Temple" over "Hair Export".
  */
-export default function BrandMark({ size = 'md', dark = false, className = '' }) {
-  const { company } = useCompanyInfo();
-  const dims = { sm: '1.05rem', md: '1.3rem', lg: '1.7rem' }[size] || '1.3rem';
-  const color = dark ? '#fff' : 'var(--ink)';
-
+export default function BrandMark({ size = 'md', tone = 'dark', className = '' }) {
+  const words = DEFAULT_COMPANY.brandName.trim().split(/\s+/);
+  const cut = Math.ceil(words.length / 2);
+  const top = words.slice(0, cut).join(' ');
+  const bottom = words.slice(cut).join(' ');
   return (
-    <span
-      className={`brandmark ${className}`}
-      style={{
-        display: 'inline-block',
-        fontFamily: 'var(--serif)',
-        fontWeight: 400,
-        letterSpacing: '0.04em',
-        textTransform: 'uppercase',
-        fontSize: dims,
-        color,
-        lineHeight: 1,
-      }}
-    >
-      {company.brandName}
+    <span className={`bm bm-${size} bm-${tone} ${className}`} aria-label={DEFAULT_COMPANY.brandName}>
+      <span className="bm-top" aria-hidden="true">{top}</span>
+      {bottom && <span className="bm-bottom" aria-hidden="true">{bottom}</span>}
     </span>
   );
 }

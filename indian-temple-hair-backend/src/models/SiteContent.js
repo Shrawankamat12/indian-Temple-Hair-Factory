@@ -7,6 +7,13 @@ const mongoose = require('mongoose');
 
 const linkSchema = new mongoose.Schema({ label: String, url: String }, { _id: false });
 
+const policySectionSchema = new mongoose.Schema({ heading: String, body: String }, { _id: false });
+const policySchema = new mongoose.Schema({
+  slug: { type: String, lowercase: true, trim: true },
+  title: String,
+  sections: { type: [policySectionSchema], default: [] },
+}, { _id: false });
+
 const siteContentSchema = new mongoose.Schema({
   // ---------------- HOME PAGE ----------------
   hero: {
@@ -119,6 +126,15 @@ const siteContentSchema = new mongoose.Schema({
       { key: 'featuredProducts', enabled: true, order: 7 },
       { key: 'collections', enabled: true, order: 8 },
       { key: 'testimonials', enabled: true, order: 9 },
+      // storefront redesign sections (existing documents without these keys treat them as enabled)
+      { key: 'textures', enabled: true, order: 10 },
+      { key: 'midBanner', enabled: true, order: 11 },
+      { key: 'offerCards', enabled: true, order: 12 },
+      { key: 'seasonalOffers', enabled: true, order: 13 },
+      { key: 'specialOffers', enabled: true, order: 14 },
+      { key: 'beforeAfter', enabled: true, order: 15 },
+      { key: 'careGuide', enabled: true, order: 16 },
+      { key: 'instagram', enabled: true, order: 17 },
     ],
   },
 
@@ -146,6 +162,8 @@ const siteContentSchema = new mongoose.Schema({
     },
     trustBadges: { type: [String], default: ['100% Temple Remy Hair', 'Single Donor', 'Worldwide Shipping', 'Secure Payments'] },
     bottomText: { type: String, default: 'Sourced in India, shipped worldwide. GSTIN 07AGVPB7155J1ZY' },
+    // "We accept" icons row in the footer (free text, e.g. Visa, Mastercard, UPI, RuPay, COD)
+    paymentMethods: { type: [String], default: [] },
   },
 
   // ---------------- HEADER ----------------
@@ -154,6 +172,12 @@ const siteContentSchema = new mongoose.Schema({
     announcementText: { type: String, default: '' },
     announcementLink: { type: String, default: '' },
   },
+
+  // Rotating announcement-bar messages (shown above the header)
+  announcements: { type: [String], default: [] },
+
+  // Editable policy pages (slug: shipping | returns | cancellation | privacy | terms)
+  policies: { type: [policySchema], default: [] },
 }, { timestamps: true });
 
 module.exports = mongoose.model('SiteContent', siteContentSchema);

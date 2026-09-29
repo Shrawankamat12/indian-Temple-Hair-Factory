@@ -1,19 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import { FiSearch, FiHeart, FiUser, FiShoppingBag, FiX, FiChevronDown, FiMenu } from 'react-icons/fi';
-import { megaMenu } from '../data/content';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { FiHeart, FiUser, FiShoppingBag, FiChevronDown, FiMenu } from 'react-icons/fi';
 import { useStore } from '../context/StoreContext';
-import { useCompanyInfo, useSiteContent } from '../hooks/useStoreData';
-import { resolveImageUrl } from '../lib/api';
+import { useCategories } from '../hooks/useStoreData';
+import { menuCategories } from '../lib/categories';
+import AnnouncementBar from './AnnouncementBar';
+import MegaMenu from './MegaMenu';
+import NavSearch from './NavSearch';
+import MobileMenu from './MobileMenu';
+import logo from '../assets/logo-header.png';
 
-const DEFAULT_MESSAGES = [
-  'Complimentary worldwide shipping on every order',
-  'Factory-direct pricing — no middlemen',
-  '100% human remy hair, quality checked',
-];
-
-const links = [
+// Company pages stay reachable (routes are unchanged): utility links on desktop, full list in the drawer.
+const LINKS = [
   { to: '/', label: 'Home', end: true },
   { to: '/shop', label: 'Shop' },
   { to: '/about', label: 'About' },
@@ -22,194 +20,116 @@ const links = [
   { to: '/journal', label: 'Journal' },
   { to: '/contact', label: 'Contact' },
 ];
+const UTILITY = LINKS.filter((l) => ['/about', '/wholesale', '/contact'].includes(l.to));
 
 export default function Navbar() {
-  const [msgIndex, setMsgIndex] = useState(0);
-  const [scrolled, setScrolled] = useState(false);
-  const [megaOpen, setMegaOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const shopItemRef = useRef(null);
-  const headerRef = useRef(null);
   const { cartCount, wishlist, user } = useStore();
-  const { company } = useCompanyInfo();
-  const { siteContent: sc } = useSiteContent();
-  const messages = sc?.announcements?.length ? sc.announcements : DEFAULT_MESSAGES;
-  const navigate = useNavigate();
+  const { categories: allCategories } = useCategories();
+  const categories = menuCategories(allCategories);
+  const location = useLocation();
+  const [scrolled, setScrolled] = useState(false);
+  const [mega, setMega] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const barRef = useRef(null);
+  const shopRef = useRef(null);
+  const megaRef = useRef(null);
+  const closeTimer = useRef(null);
+
+  // publish the sticky bar height for pages with their own sticky toolbars
+  useEffect(() => {
+    const publish = () => document.documentElement.style.setProperty('--navbar-h', `${barRef.current?.offsetHeight || 72}px`);
+    publish();
+    window.addEventListener('resize', publish);
+    return () => window.removeEventListener('resize', publish);
+  }, [scrolled]);
 
   useEffect(() => {
-    function publishHeight() {
-      document.documentElement.style.setProperty('--navbar-h', `${headerRef.current?.offsetHeight || 0}px`);
-    }
-    publishHeight();
-    window.addEventListener('resize', publishHeight);
-    return () => window.removeEventListener('resize', publishHeight);
-  }, [scrolled, searchOpen]);
-
-  useEffect(() => {
-    function onDocClick(e) {
-      if (shopItemRef.current && !shopItemRef.current.contains(e.target)) setMegaOpen(false);
-    }
-    function onKey(e) { if (e.key === 'Escape') { setMegaOpen(false); setSearchOpen(false); } }
-    document.addEventListener('mousedown', onDocClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, []);
-
-  useEffect(() => {
-    const t = setInterval(() => setMsgIndex((i) => (i + 1) % messages.length), 3800);
-    return () => clearInterval(t);
-  }, [messages.length]);
-
-  useEffect(() => {
-    function onScroll() { setScrolled(window.scrollY > 16); }
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  function submitSearch(e) {
-    e.preventDefault();
-    if (query.trim()) {
-      navigate(`/search?q=${encodeURIComponent(query.trim())}`);
-      setQuery('');
-      setSearchOpen(false);
-      setDrawerOpen(false);
-    }
-  }
+  // close everything on route change
+  useEffect(() => { setMega(false); setMenuOpen(false); }, [location.pathname, location.search]);
+
+  // Escape closes the mega menu; a click outside BOTH the "Shop" trigger and the mega panel closes it.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') setMega(false); };
+    const onDown = (e) => {
+      const inShop = shopRef.current?.contains(e.target);
+      const inMega = megaRef.current?.contains(e.target);
+      if (!inShop && !inMega) setMega(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDown);
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown); };
+  }, []);
+
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
+
+  const openMega = () => { clearTimeout(closeTimer.current); setMega(true); };
+  const closeMega = () => { clearTimeout(closeTimer.current); closeTimer.current = setTimeout(() => setMega(false), 180); };
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   return (
-    <header ref={headerRef} className="hdr">
-      <div className="hdr-utility">
-        <div className="container hdr-utility-inner">
-          <span className="hdr-utility-left">
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={msgIndex}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.3 }}
-              >
-                {messages[msgIndex]}
-              </motion.span>
-            </AnimatePresence>
-          </span>
-          <span className="hdr-utility-right">
-            <Link to="/faq">Help</Link>
-            <Link to="/account">Track Order</Link>
-          </span>
-        </div>
-      </div>
-
-      <div className={`hdr-main ${scrolled ? 'scrolled' : ''}`}>
-        <div className="hdr-row">
-          <button className="hdr-burger" aria-label="Open menu" onClick={() => setDrawerOpen(true)}>
-            <FiMenu size={20} />
+    <header className="hdr">
+      <AnnouncementBar />
+      <div ref={barRef} className={`hdr-bar ${scrolled ? 'is-scrolled' : ''}`}>
+        <div className="container hdr-grid">
+          <button type="button" className="icon-btn hdr-burger" onClick={() => setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen}>
+            <FiMenu size={22} />
           </button>
 
-          <nav className="hdr-nav">
-            {links.map((l) =>
-              l.label === 'Shop' ? (
-                <span key={l.to} ref={shopItemRef} className="relative" onMouseEnter={() => setMegaOpen(true)} onMouseLeave={() => setMegaOpen(false)}>
-                  <NavLink to={l.to} className={({ isActive }) => `hdr-nav-link ${isActive ? 'active' : ''}`}>
-                    {l.label}
-                    <FiChevronDown size={12} style={{ marginLeft: 4, display: 'inline', transform: megaOpen ? 'rotate(180deg)' : 'none', transition: 'transform 200ms ease' }} />
-                  </NavLink>
-                  <div className={`hdr-mega ${megaOpen ? 'open' : ''}`}>
-                    <div className="hdr-mega-grid">
-                      {megaMenu.map((col) => (
-                        <div className="hdr-mega-col" key={col.title}>
-                          <h4>{col.title}</h4>
-                          <ul>
-                            {col.items.map((it) => (
-                              <li key={it}>
-                                <Link to="/shop" onClick={() => setMegaOpen(false)}>{it}</Link>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                      <Link to="/shop" onClick={() => setMegaOpen(false)} className="hdr-mega-feature">
-                        <img src={resolveImageUrl(megaMenu[0]?.img)} alt="Shop the collection" />
-                        <span className="hdr-mega-feature-label">Shop the collection</span>
-                      </Link>
-                    </div>
-                  </div>
-                </span>
-              ) : (
-                <NavLink key={l.to} to={l.to} end={l.end} className={({ isActive }) => `hdr-nav-link ${isActive ? 'active' : ''}`}>
-                  {l.label}
-                </NavLink>
-              )
-            )}
-          </nav>
+          {/* Logo sits in the left column and spans both header rows (search row + category row) */}
+          <Link to="/" className="hdr-logo" aria-label="Indian Temple Hair Export, home">
+            <img src={logo} alt="Indian Temple Hair Export" width="102" height="92" decoding="async" />
+          </Link>
 
-          <Link to="/" className="hdr-logo">{company.brandName}</Link>
+          <NavSearch className="hdr-search" />
 
           <div className="hdr-actions">
-            <button className="hdr-icon-btn" aria-label="Search" onClick={() => setSearchOpen((o) => !o)}>
-              <FiSearch size={18} />
-            </button>
-            <Link className="hdr-icon-btn" to={user ? '/account' : '/login'} aria-label="Account">
-              <FiUser size={18} />
+            <Link className="hdr-act hdr-account" to={user ? '/account' : '/login'} aria-label={user ? 'My account' : 'Sign in'}>
+              <FiUser size={20} /><span>{user ? 'Account' : 'Sign in'}</span>
             </Link>
-            <Link className="hdr-icon-btn" to="/wishlist" aria-label="Wishlist">
-              <FiHeart size={18} />
-              {wishlist.length > 0 && <span className="hdr-icon-badge">{wishlist.length}</span>}
+            <Link className="hdr-act" to="/wishlist" aria-label={`Wishlist${wishlist.length ? `, ${wishlist.length} items` : ''}`}>
+              <FiHeart size={20} /><span>Wishlist</span>
+              {wishlist.length > 0 && <span className="hdr-count">{wishlist.length}</span>}
             </Link>
-            <Link className="hdr-icon-btn" to="/cart" aria-label="Cart">
-              <FiShoppingBag size={18} />
-              {cartCount > 0 && <span className="hdr-icon-badge">{cartCount}</span>}
+            <Link className="hdr-act" to="/cart" aria-label={`Cart${cartCount ? `, ${cartCount} items` : ''}`}>
+              <FiShoppingBag size={20} /><span>Cart</span>
+              {cartCount > 0 && <span className="hdr-count">{cartCount}</span>}
             </Link>
           </div>
+
+          <nav className="hdr-sub" aria-label="Primary">
+            <div ref={shopRef} className="hdr-shop" onMouseEnter={openMega} onMouseLeave={closeMega}
+              onBlur={(e) => {
+                const next = e.relatedTarget;
+                if (!e.currentTarget.contains(next) && !megaRef.current?.contains(next)) setMega(false);
+              }}>
+              <NavLink to="/shop" end className={({ isActive }) => `hdr-link ${isActive ? 'active' : ''}`}>Shop</NavLink>
+              <button type="button" className="hdr-chevron" aria-label="Toggle shop menu" aria-expanded={mega} aria-controls="mega-menu"
+                onClick={() => (mega ? setMega(false) : openMega())}>
+                <FiChevronDown size={14} style={{ transform: mega ? 'rotate(180deg)' : 'none' }} />
+              </button>
+            </div>
+            {categories.map((c) => (
+              <Link key={c.slug} to={`/shop?category=${c.slug}`} className="hdr-link">{c.name}</Link>
+            ))}
+            <Link to="/shop?onSale=1" className="hdr-link hdr-link--offers">Offers</Link>
+            <span className="hdr-sub-util">
+              {UTILITY.map((l) => <NavLink key={l.to} to={l.to} className="hdr-util">{l.label}</NavLink>)}
+            </span>
+          </nav>
         </div>
 
-        <div className={`hdr-search-panel ${searchOpen ? 'open' : ''}`}>
-          <form className="hdr-search-form" onSubmit={submitSearch}>
-            <FiSearch size={18} />
-            <input
-              placeholder="Search hair extensions, wigs, closures…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search products"
-              autoFocus={searchOpen}
-            />
-          </form>
+        <div ref={megaRef} onMouseEnter={openMega} onMouseLeave={closeMega}>
+          <MegaMenu id="mega-menu" categories={categories} open={mega} onNavigate={() => setMega(false)} />
         </div>
       </div>
 
-      <div className={`hdr-drawer-backdrop ${drawerOpen ? 'open' : ''}`} onClick={() => setDrawerOpen(false)} />
-      <aside className={`hdr-drawer ${drawerOpen ? 'open' : ''}`}>
-        <div className="hdr-drawer-top">
-          <span className="hdr-logo" style={{ fontSize: '1.05rem' }}>{company.brandName}</span>
-          <button aria-label="Close menu" onClick={() => setDrawerOpen(false)} className="hdr-icon-btn"><FiX size={18} /></button>
-        </div>
-        <form className="hdr-drawer-search" onSubmit={submitSearch}>
-          <FiSearch size={16} />
-          <input placeholder="Search…" value={query} onChange={(e) => setQuery(e.target.value)} />
-        </form>
-        <div className="hdr-drawer-links">
-          {links.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.end} onClick={() => setDrawerOpen(false)}>{l.label}</NavLink>
-          ))}
-        </div>
-        <div className="hdr-drawer-cats">
-          {megaMenu.map((col) => (
-            <details key={col.title}>
-              <summary>{col.title}</summary>
-              <ul>
-                {col.items.map((it) => (
-                  <li key={it}><Link to="/shop" onClick={() => setDrawerOpen(false)}>{it}</Link></li>
-                ))}
-              </ul>
-            </details>
-          ))}
-        </div>
-      </aside>
+      <MobileMenu open={menuOpen} onClose={closeMenu} links={LINKS} categories={categories} user={user} wishlistCount={wishlist.length} />
     </header>
   );
 }

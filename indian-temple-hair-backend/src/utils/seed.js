@@ -12,6 +12,9 @@ const Product = require("../models/Product");
 const Testimonial = require("../models/Testimonial");
 const Faq = require("../models/Faq");
 const Blog = require("../models/Blog");
+const Attribute = require("../models/Attribute");
+const Banner = require("../models/Banner");
+const SiteContent = require("../models/SiteContent");
 
 const categories = [
   {
@@ -219,6 +222,73 @@ const blogs = [
   },
 ];
 
+
+// ---- Storefront redesign seed: attributes, banners, announcements, policies ----
+// Banner.image is required by the schema, so sample banners point at a neutral placeholder
+// (/uploads/seed-placeholder.svg). Replace each one from Admin → Banners; the storefront treats
+// the placeholder as "no image" and falls back to its bundled photos.
+const PH = "/uploads/seed-placeholder.svg";
+
+const attributes = [
+  ...["Straight", "Body Wave", "Deep Wave", "Water Wave", "Curly", "Kinky Straight"].map((name, i) => ({ type: "hairTexture", name, value: name, sortOrder: i })),
+  ...["Transparent Lace", "HD Lace", "Swiss Lace"].map((name, i) => ({ type: "laceType", name, value: name, sortOrder: i })),
+  ...["Remy", "Virgin", "Raw"].map((name, i) => ({ type: "hairType", name, value: name, sortOrder: i })),
+  ...["130%", "150%", "180%"].map((name, i) => ({ type: "hairDensity", name, value: name, sortOrder: i })),
+];
+
+const banners = [
+  { placement: "home-hero", title: "Pure Indian Hair. Naturally Beautiful.", subtitle: "Premium quality human hair, wigs & extensions", ctaText: "Shop Now", ctaLink: "/shop", order: 0 },
+  { placement: "home-mid", title: "Indian Raw Hair", subtitle: "Pure. Natural. Unprocessed.", ctaText: "Shop Now", ctaLink: "/shop", order: 0 },
+  { placement: "offer-card", title: "New Arrivals", subtitle: "Fresh drops, just landed", ctaText: "Shop Now", ctaLink: "/shop?sort=newest", order: 0 },
+  { placement: "offer-card", title: "Flat 20% Off", subtitle: "On selected bundles", ctaText: "Shop Now", ctaLink: "/shop", order: 1 },
+  { placement: "offer-card", title: "Combo Offer", subtitle: "Bundle more, save more", ctaText: "Shop Now", ctaLink: "/shop", order: 2 },
+  { placement: "offer-card", title: "First Order Offer", subtitle: "Use your welcome code at checkout", ctaText: "Shop Now", ctaLink: "/shop", order: 3 },
+  ...["Seasonal Pick 1", "Seasonal Pick 2", "Seasonal Pick 3", "Seasonal Pick 4"].map((title, i) => ({ placement: "seasonal-offer", title, ctaText: "Shop Now", ctaLink: "/shop", order: i })),
+  { placement: "home-strip", title: "Virtual Try-On", subtitle: "Find the look that suits you", ctaText: "Try Now", ctaLink: "/contact", order: 0 },
+  { placement: "shop-top", title: "The Complete Collection", subtitle: "Hand-inspected at our Delhi unit", order: 0 },
+  { placement: "category-top", title: "Shop by Category", subtitle: "Pure. Natural. Luxurious.", order: 0 },
+  { placement: "deal-of-day", title: "Deal of the Day", subtitle: "Limited time", ctaText: "Shop Now", ctaLink: "/shop", order: 0 },
+  { placement: "popup", title: "Welcome Offer", subtitle: "Get 10% off your first order", ctaText: "Shop Now", ctaLink: "/shop", order: 0 },
+].map((b) => ({ image: PH, isActive: true, ...b }));
+
+const policies = [
+  { slug: "shipping", title: "Shipping Policy", sections: [
+    { heading: "Dispatch time", body: "Orders are dispatched from our New Delhi unit within 24 hours of confirmation." },
+    { heading: "Delivery time", body: "Domestic delivery typically takes 3-6 business days. International delivery takes 6-12 business days." },
+    { heading: "Shipping charges", body: "Standard shipping is charged at checkout. Orders above the free-shipping threshold ship free." },
+    { heading: "Tracking", body: "You will receive tracking details by email and SMS once your order ships." },
+  ] },
+  { slug: "returns", title: "Return & Refund Policy", sections: [
+    { heading: "Eligibility", body: "Unused, unopened products can be returned within 7 days of delivery." },
+    { heading: "How to return", body: "Contact us with your order number and photos. We will arrange pickup or share return instructions." },
+    { heading: "Refunds", body: "Approved refunds are processed to the original payment method within 5-7 business days of receiving the item." },
+    { heading: "Non-returnable items", body: "Used, altered or coloured hair products and custom-made orders cannot be returned." },
+  ] },
+  { slug: "cancellation", title: "Cancellation Policy", sections: [
+    { heading: "Before dispatch", body: "You can cancel an order any time before it is dispatched for a full refund." },
+    { heading: "After dispatch", body: "Once shipped, an order cannot be cancelled. You may use the return process after delivery." },
+    { heading: "Refund timeline", body: "Refunds for cancelled orders are processed to the original payment method within 5-7 business days." },
+  ] },
+  { slug: "privacy", title: "Privacy Policy", sections: [
+    { heading: "Information we collect", body: "We collect the details you provide at checkout, account sign-up, contact and newsletter forms." },
+    { heading: "How we use it", body: "To process orders, deliver products, provide support and, if you opt in, send updates." },
+    { heading: "Payments", body: "Card and UPI payments are handled by our payment gateway. We do not store your card details." },
+    { heading: "Your choices", body: "You can request access, correction or deletion of your data by contacting us." },
+  ] },
+  { slug: "terms", title: "Terms of Service", sections: [
+    { heading: "Using this site", body: "By using this website you agree to these terms and to all applicable laws." },
+    { heading: "Orders & pricing", body: "Prices are in INR and may change without notice. An order is confirmed only after payment or COD verification." },
+    { heading: "Product information", body: "We take care to describe and photograph products accurately; colours may vary slightly by screen." },
+    { heading: "Contact", body: "Questions about these terms can be sent through our Contact page." },
+  ] },
+];
+
+const announcements = [
+  "Free Shipping on orders above the free-shipping threshold",
+  "Cash on Delivery available",
+  "Easy 7-day returns on unused products",
+];
+
 async function run() {
   await connectDB();
 
@@ -246,6 +316,20 @@ async function run() {
   await Blog.deleteMany();
   await Blog.insertMany(blogs);
 
+
+  await Attribute.deleteMany();
+  await Attribute.insertMany(attributes);
+
+  await Banner.deleteMany();
+  await Banner.insertMany(banners);
+
+  // SiteContent is a singleton: only touch the new fields, keep anything the admin already edited
+  let sc = await SiteContent.findOne();
+  if (!sc) sc = new SiteContent();
+  if (!sc.announcements || !sc.announcements.length) sc.announcements = announcements;
+  if (!sc.policies || !sc.policies.length) sc.policies = policies;
+  await sc.save();
+
   const adminExists = await User.findOne({ email: "admin@indiantemplehair.com" });
   if (!adminExists) {
     await User.create({
@@ -258,7 +342,7 @@ async function run() {
   }
 
   console.log(
-    `Seed complete — ${insertedCategories.length} categories, ${sampleProducts.length} products, ${testimonials.length} testimonials, ${faqs.length} FAQs, ${blogs.length} blog post(s).`,
+    `Seed complete — ${insertedCategories.length} categories, ${sampleProducts.length} products, ${testimonials.length} testimonials, ${faqs.length} FAQs, ${blogs.length} blog post(s), ${attributes.length} attributes, ${banners.length} banners, ${policies.length} policy pages.`,
   );
   mongoose.connection.close();
 }

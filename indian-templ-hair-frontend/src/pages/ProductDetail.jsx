@@ -1,28 +1,31 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FiX, FiPlay, FiHeart, FiShield, FiTruck as FiTruckIcon } from 'react-icons/fi';
+import { FiX, FiPlay, FiHeart, FiTruck, FiShield } from 'react-icons/fi';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import PhotoBlock from '../components/PhotoBlock';
 import ImageZoom from '../components/ImageZoom';
 import StarRating from '../components/StarRating';
-import ProductCard from '../components/ProductCard';
-import PageHeader from '../components/PageHeader';
+import Breadcrumb from '../components/Breadcrumb';
+import SectionHeading from '../components/SectionHeading';
 import QuickView from '../components/QuickView';
 import TrustBadges from '../components/TrustBadges';
 import FrequentlyBoughtTogether from '../components/FrequentlyBoughtTogether';
 import RecentlyViewed from '../components/RecentlyViewed';
-import { ProductGridSkeleton, LineSkeleton, BlockSkeleton } from '../components/Skeletons';
+import Button from '../components/Button';
+import { LineSkeleton, BlockSkeleton } from '../components/Skeletons';
 import { ErrorState } from '../components/StateBlocks';
 import { rupee } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
-import { useProduct, useProducts, useProductReviews } from '../hooks/useStoreData';
+import { useProduct, useProducts, useProductReviews, useSiteContent } from '../hooks/useStoreData';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
-import { reviewsApi } from '../lib/resources';
+import { reviewsApi, shippingApi } from '../lib/resources';
+import ProductCarousel from '../components/ProductCarousel';
+import BadgeIcon from '../components/BadgeIcon';
 import { useStore } from '../context/StoreContext';
 import { useCompare } from '../context/CompareContext';
 
 const DEFAULT_LENGTHS = [14, 18, 22, 26, 30];
 const DEFAULT_COLORS = ['Natural Black', '#1B Natural Black', 'Ombre', 'Custom'];
-const TABS = ['Description', 'Specifications', 'Shipping', 'Reviews'];
+const TABS = ['Product Details', 'Specifications', 'Shipping', 'Reviews'];
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -33,7 +36,12 @@ export default function ProductDetail() {
   const [selLength, setSelLength] = useState(18);
   const [selColor, setSelColor] = useState(undefined);
   const [qty, setQty] = useState(1);
-  const [tab, setTab] = useState('Description');
+  const [tab, setTab] = useState('Product Details');
+  const [selLace, setSelLace] = useState(undefined);
+  const [selDensity, setSelDensity] = useState(undefined);
+  const [pincode, setPincode] = useState('');
+  const [delivery, setDelivery] = useState(null); // { status: 'loading' | 'ok' | 'error', data?, message? }
+  const { siteContent } = useSiteContent();
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [showVideo, setShowVideo] = useState(false);
 
@@ -49,14 +57,28 @@ export default function ProductDetail() {
     return fromVariants.length ? fromVariants : DEFAULT_COLORS;
   }, [variants]);
 
+  // Lace type + density: shown as option groups when variants define them, otherwise as the product's own single value.
+  const laceOptions = useMemo(() => {
+    const fromVariants = [...new Set(variants.map((v) => v.laceType).filter(Boolean))];
+    return fromVariants.length ? fromVariants : (product?.laceType ? [product.laceType] : []);
+  }, [variants, product?.laceType]);
+  const densityOptions = useMemo(() => {
+    const fromVariants = [...new Set(variants.map((v) => v.density).filter(Boolean))];
+    return fromVariants.length ? fromVariants : (product?.hairDensity ? [product.hairDensity] : []);
+  }, [variants, product?.hairDensity]);
+
   const selectedVariant = variants.find(
     (v) => (!v.length || String(v.length) === String(selLength)) && (!v.colour || v.colour === selColor)
+      && (!v.laceType || !selLace || v.laceType === selLace) && (!v.density || !selDensity || v.density === selDensity)
   );
 
   useEffect(() => {
     if (product) {
       setSelLength(lengthOptions[0] ?? product.length ?? 18);
       setSelColor(colorOptions[0] ?? product.color);
+      setSelLace(laceOptions[0]);
+      setSelDensity(densityOptions[0]);
+      setDelivery(null);
       setActiveImg(0);
       setShowVideo(false);
     }
@@ -74,15 +96,14 @@ export default function ProductDetail() {
 
   if (loading) {
     return (
-      <div className="section pdp-section">
+      <div className="section pdp">
         <div className="container pdp-grid">
-          <BlockSkeleton height={480} />
-          <div>
-            <LineSkeleton width="60%" height={28} />
-            <div style={{ height: 12 }} />
+          <BlockSkeleton height={560} />
+          <div style={{ display: 'grid', gap: 14, alignContent: 'start' }}>
+            <LineSkeleton width="60%" height={34} />
             <LineSkeleton width="40%" />
-            <div style={{ height: 20 }} />
             <LineSkeleton width="30%" height={32} />
+            <LineSkeleton width="100%" height={90} />
           </div>
         </div>
       </div>
@@ -91,7 +112,7 @@ export default function ProductDetail() {
 
   if (error) {
     return (
-      <div className="section pdp-section">
+      <div className="section pdp">
         <div className="container">
           <ErrorState message="This product could not be loaded." onRetry={refetch} />
         </div>
@@ -112,13 +133,40 @@ export default function ProductDetail() {
   const thumbImages = [...new Set([product.image, ...ownGallery])].filter(Boolean);
   if (thumbImages.length < 2) thumbImages.push(...related.map((p) => p.image).filter(Boolean));
   // Resolve every image (admin-uploaded paths like "/uploads/xyz.png") into a full URL
-  // the browser can actually load — this was previously missing, which is why
-  // admin-uploaded product images weren't rendering on this page.
+  // the browser can actually load.
   const galleryImages = [...new Set(thumbImages)].slice(0, 6).map(resolveImageUrl);
 
   const effectivePrice = selectedVariant?.price ?? product.price;
   const effectiveStock = selectedVariant ? selectedVariant.stock : product.stock;
   const effectiveSku = selectedVariant?.sku || product.sku;
+  const onSale = product.discountPct > 0;
+  const cartItem = { ...product, price: effectivePrice, sku: effectiveSku, length: selLength, color: selColor };
+  const whyItems = (siteContent?.whyChooseUs?.items || []).slice(0, 4);
+  const alsoLike = [...related, ...similar];
+  const specRows = [
+    ['Hair type', product.hairType], ['Texture', product.texture || product.hairTexture], ['Lace type', product.laceType],
+    ['Density', product.hairDensity], ['Colour', product.color], ['Weight', product.weight && `${product.weight} per bundle`],
+    ['Available lengths', lengthOptions.length ? `${lengthOptions.join('", ')}"` : ''], ['SKU', effectiveSku],
+  ].filter(([, v]) => v);
+
+  async function checkDelivery(e) {
+    e.preventDefault();
+    if (!/^[1-9][0-9]{5}$/.test(pincode)) { setDelivery({ status: 'error', message: 'Enter a valid 6-digit pincode.' }); return; }
+    setDelivery({ status: 'loading' });
+    try {
+      const res = await shippingApi.check(pincode);
+      setDelivery({ status: 'ok', data: res.data });
+    } catch (err) {
+      setDelivery({ status: 'error', message: err.message || 'Could not check this pincode right now.' });
+    }
+  }
+
+  const highlights = [
+    product.hairType && ['Hair type', product.hairType],
+    product.texture && ['Texture', product.texture],
+    product.weight && ['Weight', `${product.weight} per bundle`],
+    effectiveSku && ['SKU', effectiveSku],
+  ].filter(Boolean);
 
   async function submitReview(e) {
     e.preventDefault();
@@ -141,241 +189,230 @@ export default function ProductDetail() {
 
   return (
     <>
-      <PageHeader crumbs={[{ label: 'Shop', to: '/shop' }, { label: product.name }]} title={product.name} lede={`SKU ${effectiveSku} · ${product.hairType || ''} · ${product.texture || ''}`} />
+      <div className="container pdp-crumbs">
+        <Breadcrumb light crumbs={[{ label: 'Shop', to: '/shop' }, { label: product.name }]} />
+      </div>
 
-      <div className="section pdp-section">
+      <div className="pdp">
         <div className="container pdp-grid">
           {/* ===================== GALLERY ===================== */}
           <div className="pdp-gallery">
-            {showVideo && product.video ? (
-              <div className="pdp-video-frame overflow-hidden rounded-3xl shadow-[0_24px_60px_-32px_rgba(166,124,27,0.35)]">
-                <video src={resolveImageUrl(product.video)} controls autoPlay className="pdp-video" />
-                <button className="pdp-video-close" onClick={() => setShowVideo(false)} aria-label="Back to photos"><FiX /> Photos</button>
-              </div>
-            ) : (
-              // No overflow-hidden here — ImageZoom needs room to scale the image on hover,
-              // clipping it breaks the zoom interaction.
-              <div className="drop-shadow-[0_20px_45px_rgba(166,124,27,0.18)]">
-                <ImageZoom src={galleryImages[activeImg] || resolveImageUrl(product.image)} alt={product.name} tone={product.tone} rounded={22} />
-              </div>
-            )}
             {(galleryImages.length > 1 || product.video) && (
-              <div className="pdp-thumbs mt-4 flex gap-3">
+              <div className="pdp-thumbs" role="group" aria-label="Product images">
                 {galleryImages.map((img, i) => (
                   <button
-                    key={i}
-                    className={`pdp-thumb overflow-hidden rounded-xl border-2 transition-all ${
-                      !showVideo && activeImg === i
-                        ? 'border-[#17130f] shadow-[0_6px_16px_rgba(166,124,27,0.25)]'
-                        : 'border-transparent opacity-80 hover:opacity-100 hover:border-[#e4dccd]'
-                    }`}
+                    key={i} type="button"
+                    className={`pdp-thumb ${!showVideo && activeImg === i ? 'is-active' : ''}`}
+                    aria-label={`Show image ${i + 1}`} aria-pressed={!showVideo && activeImg === i}
                     onClick={() => { setActiveImg(i); setShowVideo(false); }}
                   >
-                    <PhotoBlock tone={['gold', 'brown', 'beige', 'espresso'][i % 4]} ratio="1/1" rounded={10} strands={false} src={img} alt="" />
+                    <PhotoBlock tone={['gold', 'brown', 'beige', 'espresso'][i % 4]} ratio="4/5" src={img} alt="" />
                   </button>
                 ))}
                 {product.video && (
                   <button
-                    className={`pdp-thumb pdp-thumb-video relative overflow-hidden rounded-xl border-2 transition-all ${
-                      showVideo ? 'border-[#17130f] shadow-[0_6px_16px_rgba(166,124,27,0.25)]' : 'border-transparent opacity-80 hover:opacity-100 hover:border-[#e4dccd]'
-                    }`}
-                    onClick={() => setShowVideo(true)}
-                    aria-label="Play product video"
+                    type="button" className={`pdp-thumb pdp-thumb-video ${showVideo ? 'is-active' : ''}`}
+                    onClick={() => setShowVideo(true)} aria-label="Play product video"
                   >
-                    <PhotoBlock tone="espresso" ratio="1/1" rounded={10} strands={false} src={resolveImageUrl(product.image)} alt="" />
-                    <span className="pdp-thumb-play absolute inset-0 flex items-center justify-center bg-black/30 text-white"><FiPlay /></span>
+                    <PhotoBlock tone="espresso" ratio="4/5" src={resolveImageUrl(product.image)} alt="" />
+                    <span className="pdp-thumb-play"><FiPlay /></span>
                   </button>
                 )}
               </div>
             )}
+
+            <div className="pdp-stage">
+              {showVideo && product.video ? (
+                <div className="pdp-video-frame">
+                  <video src={resolveImageUrl(product.video)} controls autoPlay className="pdp-video" />
+                  <button type="button" className="btn btn-dark btn-sm pdp-video-close" onClick={() => setShowVideo(false)} aria-label="Back to photos"><FiX /> Photos</button>
+                </div>
+              ) : (
+                <ImageZoom src={galleryImages[activeImg] || resolveImageUrl(product.image)} alt={product.name} tone={product.tone} ratio="4/5" />
+              )}
+            </div>
           </div>
 
           {/* ===================== INFO ===================== */}
           <div className="pdp-info">
             {(product.badge || product.saleBadgeText) && (
-              <div className="mb-2 flex flex-wrap gap-2">
-                {product.badge && <span className={`badge badge-${product.badge.toLowerCase().replace(/[^a-z]/g, '')}`}>{product.badge}</span>}
-                {product.saleBadgeText && <span className="badge badge-discount">{product.saleBadgeText}</span>}
+              <div className="pdp-badges">
+                {product.badge && <span className="badge badge-dark">{product.badge}</span>}
+                {product.saleBadgeText && <span className="badge badge-sale">{product.saleBadgeText}</span>}
               </div>
             )}
-            <h1 className="pdp-title leading-tight">{product.name}</h1>
-            <div className="pdp-rating mt-1.5">
-              <StarRating value={product.rating} />
-              <span>{product.rating} · {product.reviews} reviews</span>
+            <h1 className="pdp-title">{product.name}</h1>
+            <div className="rating-row pdp-rating">
+              <StarRating value={product.rating} size={15} />
+              <span>{product.rating} ({product.reviews} reviews)</span>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-gradient-to-r from-[#faf8f4] to-[#faf8f4] px-5 py-4">
-              <span className="price-now" style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.01em' }}>{rupee(effectivePrice)}</span>
-              {product.discountPct > 0 && <span className="price-strike">{rupee(product.mrp)}</span>}
-              {product.discountPct > 0 && <span className="badge badge-discount">-{product.discountPct}% OFF</span>}
+            <div className="pdp-price price-row">
+              <span className="price-now">{rupee(effectivePrice)}</span>
+              {onSale && <span className="price-was">{rupee(product.mrp)}</span>}
+              {onSale && <span className="badge badge-sale">-{product.discountPct}% off</span>}
             </div>
 
-            {product.description && <p className="pdp-desc mt-3">{product.description}</p>}
+            {product.description && <p className="pdp-desc">{product.description}</p>}
 
-            {product.tags?.length > 0 && (
-              <div className="pdp-tags">
-                {product.tags.map((t) => <span className="pdp-tag-chip" key={t}>{t}</span>)}
-              </div>
+            {highlights.length > 0 && (
+              <dl className="pdp-highlights">
+                {highlights.map(([k, v]) => (<div key={k}><dt>{k}</dt><dd>{v}</dd></div>))}
+              </dl>
             )}
 
-            {/* FIX: length chips now use their own .pdp-chip / .pdp-chip-row classes
-                (previously reused .facc-chip / .facc-chip-row from the sidebar filter
-                accordion, which forces flex-direction: column + width: 100% — that's
-                why these were rendering as a stacked checkbox list instead of pills). */}
-            <div className="pdp-variant">
-              <span className="pdp-variant-label">Length</span>
-              <div className="pdp-chip-row mt-2">
+            <fieldset className="pdp-opt">
+              <legend>Length</legend>
+              <div className="chip-row">
                 {lengthOptions.map((l) => (
-                  <button
-                    key={l}
-                    className={`pdp-chip ${String(selLength) === String(l) ? 'active' : ''}`}
-                    onClick={() => setSelLength(l)}
-                  >
-                    {l}"
-                  </button>
+                  <button key={l} type="button" className="chip" aria-pressed={String(selLength) === String(l)} onClick={() => setSelLength(l)}>{l}"</button>
                 ))}
               </div>
-            </div>
+            </fieldset>
 
-            {/* FIX: same treatment for color chips — see note above. */}
-            <div className="pdp-variant">
-              <span className="pdp-variant-label">Color</span>
-              <div className="pdp-chip-row mt-2">
+            {(product.texture || product.hairType) && (
+              <fieldset className="pdp-opt">
+                <legend>Texture / Hair Type</legend>
+                <div className="chip-row">
+                  {[product.texture || product.hairTexture, product.hairType].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).map((t) => (
+                    <span key={t} className="chip is-active" aria-label={t}>{t}</span>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
+            {laceOptions.length > 0 && (
+              <fieldset className="pdp-opt">
+                <legend>Lace Type</legend>
+                <div className="chip-row">
+                  {laceOptions.map((l) => (
+                    <button key={l} type="button" className="chip" aria-pressed={selLace === l} onClick={() => setSelLace(l)}>{l}</button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
+            {densityOptions.length > 0 && (
+              <fieldset className="pdp-opt">
+                <legend>Density</legend>
+                <div className="chip-row">
+                  {densityOptions.map((d) => (
+                    <button key={d} type="button" className="chip" aria-pressed={selDensity === d} onClick={() => setSelDensity(d)}>{d}</button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
+            <fieldset className="pdp-opt">
+              <legend>Colour</legend>
+              <div className="chip-row">
                 {colorOptions.map((c) => (
-                  <button
-                    key={c}
-                    className={`pdp-chip ${selColor === c ? 'active' : ''}`}
-                    onClick={() => setSelColor(c)}
-                  >
-                    {c}
-                  </button>
+                  <button key={c} type="button" className="chip" aria-pressed={selColor === c} onClick={() => setSelColor(c)}>{c}</button>
                 ))}
               </div>
-            </div>
+            </fieldset>
 
-            <div className="pdp-variant">
-              <span className="pdp-variant-label">Quantity</span>
-              <div className="pdp-qty">
-                <button onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
-                <span>{qty}</span>
-                <button onClick={() => setQty((q) => q + 1)}>+</button>
+            <div className="pdp-buy-row">
+              <div>
+                <span className="pdp-opt-label" id="qty-label">Quantity</span>
+                <div className="qty" role="group" aria-labelledby="qty-label">
+                  <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease quantity">−</button>
+                  <span className="qty-n" aria-live="polite">{qty}</span>
+                  <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity">+</button>
+                </div>
               </div>
+              <p className={`pdp-stock ${effectiveStock > 0 ? 'is-in' : 'is-out'}`}>
+                {effectiveStock > 0 ? 'In stock. Ships within 24 hours from Delhi.' : 'Currently out of stock'}
+              </p>
             </div>
 
-            <div className={`pdp-stock mt-4 ${effectiveStock > 0 ? 'text-emerald-600' : 'text-red-500'}`} style={{ fontWeight: 600 }}>
-              {effectiveStock > 0 ? '✓ In stock — ships within 24 hours from Delhi' : 'Currently out of stock'}
-            </div>
-
-            <div className="pdp-actions mt-3 flex items-center gap-3">
-              <button
-                className="btn btn-outline on-light flex-1"
-                onClick={() => addToCart({ ...product, price: effectivePrice, sku: effectiveSku, length: selLength, color: selColor }, qty)}
-              >
-                Add to Cart
-              </button>
-              <Link
-                to="/checkout"
-                className="btn btn-gold flex-1 text-center"
-                onClick={() => addToCart({ ...product, price: effectivePrice, sku: effectiveSku, length: selLength, color: selColor }, qty)}
-              >
-                Buy Now
-              </Link>
-              <button
-                className={`pdp-wish-btn shrink-0 ${isWishlisted(product.id) ? 'active' : ''}`}
-                onClick={() => toggleWishlist(product)}
-                aria-label="Wishlist"
-              >
-                <FiHeart />
+            <div className="pdp-actions">
+              <Button size="lg" onClick={() => addToCart(cartItem, qty)}>Add to Cart</Button>
+              <Link to="/checkout" className="btn btn-dark btn-lg" onClick={() => addToCart(cartItem, qty)}>Buy Now</Link>
+              <button type="button" className="pdp-wish" aria-pressed={isWishlisted(product.id)} onClick={() => toggleWishlist(product)} aria-label="Toggle wishlist">
+                <FiHeart size={20} />
               </button>
             </div>
 
-            <label className="pdp-compare-toggle mt-2 block">
+            <label className="check pdp-compare">
               <input type="checkbox" checked={isComparing(product.id)} onChange={() => toggleCompare(product)} />
               Add this to my comparison list
             </label>
 
-            <TrustBadges className="pdp-trust-strip mt-4" />
+            <TrustBadges className="pdp-trust" max={4} />
 
-            <div className="pdp-delivery card mt-4 flex items-start gap-3">
-              <FiTruckIcon className="mt-0.5 shrink-0 text-[#17130f]" size={18} />
-              <div>
-                <span className="eyebrow">Delivery Estimate</span>
-                <p>Order within the next 4 hours to have it ship today. Standard delivery: 3–6 business days domestic, 6–12 business days international.</p>
+            <div className="pdp-note pdp-delivery">
+              <FiTruck size={20} aria-hidden="true" />
+              <div className="pdp-delivery-body">
+                <strong>Check Delivery</strong>
+                <form className="pdp-pin" onSubmit={checkDelivery}>
+                  <label htmlFor="pincode" className="sr-only">Delivery pincode</label>
+                  <input id="pincode" className="input" inputMode="numeric" maxLength={6} placeholder="Enter pincode" value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))} />
+                  <Button type="submit" variant="dark" size="sm" loading={delivery?.status === 'loading'}>Check</Button>
+                </form>
+                <div aria-live="polite">
+                  {delivery?.status === 'error' && <p className="pdp-pin-msg is-err">{delivery.message}</p>}
+                  {delivery?.status === 'ok' && (delivery.data.serviceable === false ? (
+                    <p className="pdp-pin-msg is-err">Sorry, delivery to {delivery.data.pincode} is not available right now.</p>
+                  ) : (
+                    <p className="pdp-pin-msg">
+                      {delivery.data.estimated ? 'Estimated' : 'Expected'} delivery to {delivery.data.pincode}: {delivery.data.minDays}–{delivery.data.maxDays} business days.
+                      {delivery.data.estimated && <span className="pdp-pin-note"> This is an estimate; serviceability is confirmed at checkout.</span>}
+                    </p>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* FIX: bulk pricing card now uses a two-column layout on wider screens —
-                left column = icon/heading/copy, right column = the table — so the
-                card doesn't look empty on the left and cramped on the right. */}
-            <div className="pdp-bulk card mt-4">
-              <div className="flex flex-col md:flex-row md:items-start gap-5">
-                <div className="md:w-[38%] shrink-0">
-                  <span className="eyebrow flex items-center gap-2">
-                    <FiShield className="text-[#17130f]" size={15} /> Bulk &amp; Wholesale Pricing
-                  </span>
-                  <p className="pdp-bulk-lede mt-2">
-                    Buying for your salon or export business? Save more per bundle at higher quantities.
-                  </p>
-                  <Link to="/wholesale" className="btn btn-outline on-light btn-sm mt-4 inline-block">
-                    Get a Wholesale Quote
-                  </Link>
-                </div>
-
-                <div className="pdp-bulk-table flex-1 rounded-xl overflow-hidden border border-[#f1ece3]">
-                  <div className="pdp-bulk-row pdp-bulk-head grid grid-cols-3 gap-2 px-4 py-2.5 bg-[#faf8f4] font-semibold text-[#4a372a] text-sm">
-                    <span>Quantity</span><span>Discount</span><span>Price / Bundle</span>
-                  </div>
-                  {[
-                    { qty: '1–2 bundles', off: '—', price: effectivePrice },
-                    { qty: '3–5 bundles', off: '5% off', price: Math.round(effectivePrice * 0.95) },
-                    { qty: '6–10 bundles', off: '10% off', price: Math.round(effectivePrice * 0.9) },
-                    { qty: '11+ bundles', off: '15% off', price: Math.round(effectivePrice * 0.85) },
-                  ].map((row, i) => (
-                    <div
-                      className={`pdp-bulk-row grid grid-cols-3 gap-2 px-4 py-2.5 text-sm ${i % 2 === 1 ? 'bg-[#faf8f4]' : 'bg-white'}`}
-                      key={row.qty}
-                    >
-                      <span>{row.qty}</span>
-                      <span className="pdp-bulk-off text-emerald-600 font-semibold">{row.off}</span>
-                      <span>{rupee(row.price)}</span>
-                    </div>
-                  ))}
-                </div>
+            <div className="pdp-note pdp-bulk">
+              <FiShield size={20} aria-hidden="true" />
+              <div className="pdp-bulk-body">
+                <strong>Bulk and wholesale pricing</strong>
+                <p>Buying for your salon or export business? Save more per bundle at higher quantities.</p>
+                <table className="pdp-bulk-table">
+                  <thead><tr><th scope="col">Quantity</th><th scope="col">Discount</th><th scope="col">Price / bundle</th></tr></thead>
+                  <tbody>
+                    {[
+                      { qty: '1–2 bundles', off: '—', price: effectivePrice },
+                      { qty: '3–5 bundles', off: '5% off', price: Math.round(effectivePrice * 0.95) },
+                      { qty: '6–10 bundles', off: '10% off', price: Math.round(effectivePrice * 0.9) },
+                      { qty: '11+ bundles', off: '15% off', price: Math.round(effectivePrice * 0.85) },
+                    ].map((row) => (
+                      <tr key={row.qty}><td>{row.qty}</td><td>{row.off}</td><td className="price">{rupee(row.price)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+                <Link to="/wholesale" className="link-u">Get a wholesale quote</Link>
               </div>
             </div>
           </div>
         </div>
 
         {related.length > 0 && (
-          <div className="container" style={{ marginBottom: 60 }}>
+          <div className="container pdp-block">
             <FrequentlyBoughtTogether product={product} pool={related} />
           </div>
         )}
 
-        <div className="container pdp-tabs-wrap">
-          <div className="pdp-tabs">
+        <div className="container pdp-block">
+          <div className="pdp-tabs" role="tablist" aria-label="Product information">
             {TABS.map((t) => (
-              <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t}</button>
+              <button key={t} type="button" role="tab" id={`tab-${t}`} aria-selected={tab === t} aria-controls="pdp-panel" className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t}</button>
             ))}
           </div>
-          <div className="pdp-tab-panel">
-            {tab === 'Description' && (
+          <div className="pdp-panel" id="pdp-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
+            {tab === 'Product Details' && (
               <p>{product.description || `This piece is sourced through our Delhi factory's standard chain: hand-collected, sorted by our artisans for ${(product.texture || '').toLowerCase()} pattern and root direction, then double-drawn for uniform thickness before wefting. Every batch carries a QC signature before it leaves our New Delhi facility.`}</p>
             )}
             {tab === 'Specifications' && (
               <>
-                {product.specifications && <p style={{ marginBottom: 16, whiteSpace: 'pre-line' }}>{product.specifications}</p>}
-                <ul className="pdp-spec-list">
-                  <li><span>Hair Type</span><span>{product.hairType}</span></li>
-                  <li><span>Texture</span><span>{product.texture}</span></li>
-                  <li><span>Weight</span><span>{product.weight} per bundle</span></li>
-                  <li><span>Available Lengths</span><span>{lengthOptions.join('", ')}"</span></li>
-                  <li><span>Origin</span><span>Najafgarh Road, New Delhi, India</span></li>
-                  <li><span>SKU</span><span>{effectiveSku}</span></li>
-                </ul>
+                {product.specifications && <p style={{ marginBottom: 20, whiteSpace: 'pre-line' }}>{product.specifications}</p>}
+                <dl className="spec-list">
+                  {specRows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+                </dl>
                 {product.careInstructions && (
                   <>
-                    <span className="eyebrow" style={{ display: 'block', marginTop: 20 }}>Care Instructions</span>
+                    <h3 className="pdp-panel-sub">Care instructions</h3>
                     <p>{product.careInstructions}</p>
                   </>
                 )}
@@ -385,112 +422,74 @@ export default function ProductDetail() {
               <p>{product.shippingInfo || 'Ships from our Delhi warehouse within 24 hours. Domestic orders arrive in 3–6 business days; international orders in 6–12 business days depending on customs processing. Bulk and wholesale orders may ship by air freight with a separate timeline confirmed at checkout.'}</p>
             )}
             {tab === 'Reviews' && (
-              <div className="pdp-reviews">
-                <div className="pdp-review-summary">
-                  <span className="pdp-review-score">{product.rating}</span>
-                  <div><StarRating value={product.rating} size={16} /><span>{product.reviews} verified reviews</span></div>
+              <div className="reviews">
+                <div className="reviews-summary">
+                  <span className="reviews-score">{product.rating}</span>
+                  <div><StarRating value={product.rating} size={17} /><span>{product.reviews} verified reviews</span></div>
                 </div>
 
                 {reviewsLoading ? (
                   <LineSkeleton width="100%" height={60} />
                 ) : reviews.length === 0 ? (
-                  <p className="pdp-review-quote">No reviews yet — be the first to share how this piece wore for you.</p>
+                  <p className="reviews-empty">No reviews yet. Be the first to share how this piece wore for you.</p>
                 ) : (
-                  <ul className="pdp-review-list">
+                  <ul className="reviews-list">
                     {reviews.map((r) => (
-                      <li key={r.id} className="pdp-review-quote">
-                        <StarRating value={r.rating} size={13} /> "{r.comment}" — {r.name || 'Verified Buyer'} <span style={{ opacity: 0.6 }}>· {r.date}</span>
+                      <li key={r.id}>
+                        <StarRating value={r.rating} size={13} />
+                        <p>"{r.comment}"</p>
+                        <span>{r.name || 'Verified Buyer'}{r.date ? `, ${r.date}` : ''}</span>
                       </li>
                     ))}
                   </ul>
                 )}
 
-                ```jsx
-<form
-  className="pdp-review-form mt-5 flex max-w-[480px] flex-col gap-3"
-  onSubmit={submitReview}
->
-  <span className="eyebrow">Write a Review</span>
-
-  <div className="flex flex-wrap gap-2">
-    {[5, 4, 3, 2, 1].map((n) => (
-      <button
-        type="button"
-        key={n}
-        onClick={() =>
-          setReviewForm((f) => ({
-            ...f,
-            rating: n,
-          }))
-        }
-        className={`rounded-lg border px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-          reviewForm.rating === n
-            ? 'border-[#17130f] bg-[#17130f] text-white shadow-md'
-            : 'border-[#f1ece3] bg-white text-gray-700 hover:border-[#17130f] hover:bg-[#faf8f4] hover:text-[#833f25] hover:shadow-sm'
-        }`}
-      >
-        {n}★
-      </button>
-    ))}
-  </div>
-
-  <textarea
-    placeholder="Share your experience with this product…"
-    value={reviewForm.comment}
-    onChange={(e) =>
-      setReviewForm((f) => ({
-        ...f,
-        comment: e.target.value,
-      }))
-    }
-    rows={3}
-    required
-    className="w-full resize-none rounded-[10px] border border-[#ddd] p-[10px] font-inherit outline-none transition-all focus:border-[#17130f] focus:ring-2 focus:ring-[#17130f]/20"
-  />
-
-  <button
-    type="submit"
-    disabled={submittingReview}
-    className="self-start rounded-lg bg-[#17130f] px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#833f25] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-  >
-    {submittingReview
-      ? 'Submitting…'
-      : user
-        ? 'Submit Review'
-        : 'Sign in to Review'}
-  </button>
-</form>
-
+                <form className="reviews-form" onSubmit={submitReview}>
+                  <h3>Write a review</h3>
+                  <div className="chip-row" role="group" aria-label="Rating">
+                    {[5, 4, 3, 2, 1].map((n) => (
+                      <button type="button" key={n} className="chip" aria-pressed={reviewForm.rating === n} onClick={() => setReviewForm((f) => ({ ...f, rating: n }))}>{n} ★</button>
+                    ))}
+                  </div>
+                  <div className="field">
+                    <label className="field-label" htmlFor="review-comment">Your experience</label>
+                    <textarea id="review-comment" className="textarea" placeholder="Share your experience with this product…" value={reviewForm.comment} onChange={(e) => setReviewForm((f) => ({ ...f, comment: e.target.value }))} rows={4} required />
+                  </div>
+                  <Button type="submit" variant="dark" loading={submittingReview}>{submittingReview ? 'Submitting…' : user ? 'Submit review' : 'Sign in to review'}</Button>
+                </form>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {related.length > 0 && (
-        <div className="section section--tight-top">
+      {whyItems.length > 0 && (
+        <section className="section section--tight">
           <div className="container">
-            <div className="section-head"><span className="eyebrow">You May Also Like</span><h2 className="section-title">Related Products</h2></div>
-            <div className="product-grid pdp-related-grid">
-              {related.map((p) => <ProductCard product={p} key={p.id} onQuickView={setQuickViewProduct} />)}
-            </div>
+            <SectionHeading title="Why choose this?" />
+            <ul className="why-row">
+              {whyItems.map((it) => (
+                <li key={it.title} className="why-card">
+                  <span className="why-ico"><BadgeIcon label={`${it.title} ${it.description || ''}`} size={22} /></span>
+                  <strong>{it.title}</strong>
+                  {it.description && <span>{it.description}</span>}
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
+        </section>
       )}
 
-      {similar.length > 0 && (
-        <div className="section section--tight-top">
+      {alsoLike.length > 0 && (
+        <section className="section section--tight">
           <div className="container">
-            <div className="section-head"><span className="eyebrow">Similar Styles</span><h2 className="section-title">Similar Products</h2></div>
-            <div className="product-grid pdp-related-grid">
-              {similar.map((p) => <ProductCard product={p} key={p.id} onQuickView={setQuickViewProduct} />)}
-            </div>
+            <SectionHeading title="You may also like" />
+            <ProductCarousel products={alsoLike} onQuickView={setQuickViewProduct} label="You may also like" />
           </div>
-        </div>
+        </section>
       )}
 
       <RecentlyViewed items={recentlyViewed} />
-
       <QuickView product={quickViewProduct} onClose={() => setQuickViewProduct(null)} />
     </>
   );

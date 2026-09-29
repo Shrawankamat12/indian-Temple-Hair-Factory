@@ -1,21 +1,18 @@
-import { Link } from 'react-router-dom';
+import Breadcrumb from './Breadcrumb';
 
-export default function PageHeader({ crumbs = [], title, lede }) {
+/**
+ * Page title banner. Dark espresso band; when `image` is given it fills the right side with a
+ * gradient fade (category / policy / About hero style). Without an image it is a plain dark band.
+ */
+export default function PageHeader({ crumbs = [], title, lede, image, tall = false }) {
   return (
-    <div className="pageheader">
-      <div className="container">
-        <div className="breadcrumb">
-          <Link to="/">Home</Link>
-          {crumbs.map((c) => (
-            <span key={c.label}>
-              <span className="crumb-sep">/</span>
-              {c.to ? <Link to={c.to}>{c.label}</Link> : <span>{c.label}</span>}
-            </span>
-          ))}
-        </div>
-        <h1 className="pageheader-title">{title}</h1>
-        {lede && <p className="pageheader-lede">{lede}</p>}
+    <header className={`pagehead ${image ? 'pagehead--img' : ''} ${tall ? 'pagehead--tall' : ''}`}>
+      {image && <img className="pagehead-bg" src={image} alt="" />}
+      <div className="container pagehead-inner">
+        <Breadcrumb crumbs={crumbs} />
+        <h1 className="pagehead-title">{title}</h1>
+        {lede && <p className="pagehead-lede">{lede}</p>}
       </div>
-    </div>
+    </header>
   );
 }

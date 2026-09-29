@@ -27,6 +27,9 @@ export default function BannerList() {
         { value: 'deal-of-day', label: 'Deal of the Day' },
         { value: 'category-top', label: 'Category Top' },
         { value: 'popup', label: 'Popup' },
+        { value: 'home-mid', label: 'Home Mid Banner' },
+        { value: 'offer-card', label: 'Special Offer Card' },
+        { value: 'seasonal-offer', label: 'Seasonal Offer Card' },
       ],
     },
     { name: 'image', label: 'Banner Image', type: 'image', required: true },
@@ -79,6 +82,9 @@ export default function BannerList() {
           { value: 'deal-of-day', label: 'Deal of the Day' },
           { value: 'category-top', label: 'Category Top' },
           { value: 'popup', label: 'Popup' },
+          { value: 'home-mid', label: 'Home Mid Banner' },
+          { value: 'offer-card', label: 'Special Offer Card' },
+          { value: 'seasonal-offer', label: 'Seasonal Offer Card' },
         ] }]}
         statusOptions={[{ value: true, label: 'Active' }, { value: false, label: 'Inactive' }]}
       />

@@ -4,11 +4,12 @@ const attributeSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['hairType', 'hairTexture', 'hairLength', 'hairColour', 'hairDensity', 'hairWeight', 'hairOrigin'],
+    enum: ['hairType', 'hairTexture', 'hairLength', 'hairColour', 'hairDensity', 'hairWeight', 'hairOrigin', 'laceType'],
   },
   name: { type: String, required: true, trim: true },
   value: { type: String },
   colorSwatch: { type: String },
+  image: { type: String },          // thumbnail (used by Shop by Texture / Hair Type tiles)
   sortOrder: { type: Number, default: 0 },
   status: { type: Boolean, default: true },
   productCount: { type: Number, default: 0 },

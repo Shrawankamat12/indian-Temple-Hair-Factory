@@ -1,5 +1,7 @@
 import { useParams } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
+import { useSiteContent } from '../hooks/useStoreData';
+import { LoadingState } from '../components/StateBlocks';
 
 const content = {
   shipping: {
@@ -22,6 +24,14 @@ const content = {
       ['Wholesale / Bulk Orders', 'Bulk and wholesale export orders are covered under separate terms agreed at the time of the order; please refer to your wholesale agreement.'],
     ],
   },
+  cancellation: {
+    title: 'Cancellation Policy',
+    body: [
+      ['Before Dispatch', 'You can cancel an order at any time before it is dispatched. Contact support with your order number and we will confirm the cancellation.'],
+      ['After Dispatch', 'Once an order has shipped it cannot be cancelled; you may use our return process after delivery.'],
+      ['Refunds for Cancelled Orders', 'Refunds for cancelled prepaid orders are processed to the original payment method within 5–7 business days.'],
+    ],
+  },
   privacy: {
     title: 'Privacy Policy',
     body: [
@@ -42,24 +52,36 @@ const content = {
   },
 };
 
+// Admin-edited policy (Website Content → Policy Pages, matched by slug) wins; the built-in text above
+// is only a fallback for slugs the admin has not created yet.
 export default function Policy() {
   const { type } = useParams();
-  const page = content[type] || content.shipping;
+  const { siteContent, loading } = useSiteContent();
+  if (loading) return <LoadingState label="Loading policy" />;
+
+  const cms = (siteContent?.policies || []).find((p) => p.slug === type && (p.sections?.length || p.title));
+  const fallback = content[type] || content.shipping;
+  const title = cms?.title || fallback.title;
+  const sections = cms
+    ? (cms.sections || []).map((s) => [s.heading, s.body])
+    : fallback.body;
 
   return (
     <>
-      <PageHeader crumbs={[{ label: page.title }]} title={page.title} />
-      <div className="section">
-        <div className="container">
-          <div className="policy-content">
-            <p className="policy-updated">Last updated: July 1, 2026</p>
-            {page.body.map(([h, p]) => (
-              <div key={h}>
-                <h2>{h}</h2>
-                <p>{p}</p>
-              </div>
+      <PageHeader crumbs={[{ label: title }]} title={title} tall />
+      <div className="section section--tight">
+        <div className="container container--narrow">
+          <ol className="policy-list">
+            {sections.map(([h, p], i) => (
+              <li key={`${h}-${i}`} className="policy-item">
+                <span className="policy-num num" aria-hidden="true">{i + 1}</span>
+                <div>
+                  {h && <h2>{h}</h2>}
+                  {(p || '').split(/\n{2,}/).map((para, j) => <p key={j}>{para}</p>)}
+                </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </div>
     </>

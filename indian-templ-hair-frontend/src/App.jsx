@@ -5,8 +5,10 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Toast from './components/Toast';
 import CompareTray from './components/CompareTray';
+import PromoPopup from './components/PromoPopup';
 
 import Home from './pages/Home';
+import { LoadingState } from './components/StateBlocks';
 
 const Shop = lazy(() => import('./pages/Shop'));
 const ProductDetail = lazy(() => import('./pages/ProductDetail'));
@@ -50,24 +52,7 @@ function ScrollToTop() {
 ============================================================ */
 
 function RouteFallback() {
-  return (
-    <div
-      style={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <span
-        className="brand-mark"
-        style={{ '--bm-size': '46px' }}
-      >
-        <span className="brand-mark-ring" />
-        <span className="brand-mark-letter">B</span>
-      </span>
-    </div>
-  );
+  return <LoadingState label="Loading page" />;
 }
 
 
@@ -212,6 +197,8 @@ export default function App() {
       <Toast />
 
       <CompareTray />
+
+      <PromoPopup />
     </>
   );
 }

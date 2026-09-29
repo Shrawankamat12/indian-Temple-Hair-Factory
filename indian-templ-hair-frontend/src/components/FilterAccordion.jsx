@@ -19,7 +19,7 @@ export default function FilterAccordion({ title, children, defaultOpen = true })
 
   return (
     <div className="facc">
-      <button className="facc-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+      <button type="button" className="facc-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span>{title}</span>
         <svg className={`facc-chevron ${open ? 'open' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none">
           <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />

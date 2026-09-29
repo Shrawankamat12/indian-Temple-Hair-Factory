@@ -41,6 +41,7 @@ const productSchema = new mongoose.Schema({
   hairColour: { type: String },
   hairDensity: { type: String },
   hairOrigin: { type: String },
+  laceType: { type: String },
 
   gallery: [{ url: String, isPrimary: { type: Boolean, default: false } }],
   video: { type: String },
@@ -70,7 +71,7 @@ const productSchema = new mongoose.Schema({
 
   hasVariants: { type: Boolean, default: false },
   variants: [{
-    length: String, colour: String, texture: String, weight: String, density: String,
+    length: String, colour: String, texture: String, weight: String, density: String, laceType: String,
     sku: String, price: Number, stock: { type: Number, default: 0 },
   }],
 }, { timestamps: true });

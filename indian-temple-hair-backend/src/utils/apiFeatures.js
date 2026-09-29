@@ -18,7 +18,8 @@ class ApiFeatures {
 
   search(fields = ['name']) {
     if (this.queryString.search) {
-      const regex = new RegExp(this.queryString.search, 'i');
+      // escape user input so a stray "(" or "*" can't throw or trigger catastrophic backtracking
+      const regex = new RegExp(String(this.queryString.search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
       this.query = this.query.find({ $or: fields.map((f) => ({ [f]: regex })) });
     }
     return this;

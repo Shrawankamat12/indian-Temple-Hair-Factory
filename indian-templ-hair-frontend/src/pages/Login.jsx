@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaGoogle, FaFacebookF } from 'react-icons/fa';
 import { useStore } from '../context/StoreContext';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 import BrandMark from '../components/BrandMark';
+import Button from '../components/Button';
+import authImg from '../assets/photos/hero-model.jpg';
 
 export default function Login() {
   const [mode, setMode] = useState('login');
@@ -15,6 +18,7 @@ export default function Login() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [showPw, setShowPw] = useState(false); // UI only
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -101,219 +105,116 @@ export default function Login() {
     setMode(nextMode);
   }
 
-  const inputClass =
-    'w-full rounded-xl border border-[#e4dccd] bg-[#faf8f4] px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 outline-none transition-colors focus:border-[#17130f] focus:bg-white';
+  const titles = { login: 'Welcome back', register: 'Create your account', forgot: 'Forgot password', reset: 'Reset password' };
+  const subs = {
+    login: 'Sign in to view your orders and saved pieces.',
+    register: 'Join to track orders and keep your wishlist across devices.',
+    forgot: 'Enter your email and we will send you a password reset link.',
+    reset: 'Create a new password for your account.',
+  };
+  const pwType = showPw ? 'text' : 'password';
+  const PwToggle = () => (
+    <button type="button" className="pw-toggle" onClick={() => setShowPw((s) => !s)} aria-label={showPw ? 'Hide password' : 'Show password'}>
+      {showPw ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+    </button>
+  );
 
   return (
-    <div className="flex min-h-[calc(100vh-var(--navbar-h,0px))] items-start justify-center bg-gradient-to-br from-[#faf8f4] via-[#faf8f4] to-[#f1ece3] px-5 py-6">
-      <div className="w-full max-w-[440px] overflow-hidden rounded-3xl bg-white shadow-[0_30px_70px_-25px_rgba(166,124,27,0.32)]">
+    <div className="auth">
+      <aside className="auth-art" aria-hidden="true">
+        <div className="auth-art-arch"><img src={authImg} alt="" /></div>
+        <p className="auth-art-line">Premium Indian hair, crafted for confidence.</p>
+      </aside>
 
-        {/* ===================== FORM ===================== */}
-        <div className="flex items-center justify-center px-6 py-6 sm:px-9">
-          <div className="w-full max-w-[380px]">
+      <div className="auth-panel">
+        <div className="auth-box">
+          <Link to="/" className="auth-brand" aria-label="Home"><BrandMark size="sm" /></Link>
 
-            {/* BRAND */}
-            <Link to="/" className="mb-3 flex items-center gap-2.5">
-              <BrandMark size="sm" />
-            </Link>
+          {(mode === 'login' || mode === 'register') && (
+            <div className="seg" role="tablist" aria-label="Account">
+              <button type="button" role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'is-on' : ''} onClick={() => switchMode('login')}>Sign in</button>
+              <button type="button" role="tab" aria-selected={mode === 'register'} className={mode === 'register' ? 'is-on' : ''} onClick={() => switchMode('register')}>Create account</button>
+            </div>
+          )}
 
-            {/* TABS */}
-            {(mode === 'login' || mode === 'register') && (
-              <div className="mb-4 flex gap-1 rounded-full bg-[#faf8f4] p-1">
-                <button
-                  type="button"
-                  onClick={() => switchMode('login')}
-                  className={`flex-1 rounded-full py-2 text-xs font-semibold transition-all ${
-                    mode === 'login'
-                      ? 'bg-white text-[#833f25] shadow-[0_4px_12px_rgba(166,124,27,0.18)]'
-                      : 'text-gray-400'
-                  }`}
-                >
-                  Sign In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => switchMode('register')}
-                  className={`flex-1 rounded-full py-2 text-xs font-semibold transition-all ${
-                    mode === 'register'
-                      ? 'bg-white text-[#833f25] shadow-[0_4px_12px_rgba(166,124,27,0.18)]'
-                      : 'text-gray-400'
-                  }`}
-                >
-                  Create Account
-                </button>
-              </div>
-            )}
+          <h1 className="auth-title">{titles[mode]}</h1>
+          <p className="auth-sub">{subs[mode]}</p>
 
-            {/* TITLE */}
-            <h1 className="mb-1 font-serif text-xl font-bold text-gray-900">
-              {mode === 'login' && 'Welcome Back'}
-              {mode === 'register' && 'Create Account'}
-              {mode === 'forgot' && 'Forgot Password'}
-              {mode === 'reset' && 'Reset Password'}
-            </h1>
-
-            <p className="mb-4 text-sm leading-snug text-gray-500">
-              {mode === 'login' && 'Login to your account'}
-              {mode === 'register' && 'Sign up to get started'}
-              {mode === 'forgot' && 'Enter your email and we will send you a password reset link'}
-              {mode === 'reset' && 'Create a new password for your account'}
-            </p>
-
-            {/* FORM */}
-            <form className="flex flex-col gap-3" onSubmit={onSubmit}>
-              {mode === 'register' && (
-                <>
-                  <input placeholder="Full Name" required className={inputClass} {...field('name')} />
-                  <input type="tel" placeholder="Phone Number" className={inputClass} {...field('phone')} />
-                </>
-              )}
-
-              {(mode === 'login' || mode === 'register' || mode === 'forgot') && (
-                <input
-                  type="email"
-                  placeholder="Email Address"
-                  required
-                  className={inputClass}
-                  {...field('email')}
-                />
-              )}
-
-              {(mode === 'login' || mode === 'register' || mode === 'reset') && (
-                <input
-                  type="password"
-                  placeholder={mode === 'reset' ? 'New Password' : 'Password'}
-                  required
-                  minLength={8}
-                  className={inputClass}
-                  {...field('password')}
-                />
-              )}
-
-              {(mode === 'register' || mode === 'reset') && (
-                <input
-                  type="password"
-                  placeholder="Confirm Password"
-                  required
-                  minLength={8}
-                  className={inputClass}
-                  {...field('confirmPassword')}
-                />
-              )}
-
-              {mode === 'login' && (
-                <div className="-mt-0.5 flex items-center justify-between">
-                  <label className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <input type="checkbox" defaultChecked className="accent-[#17130f]" />
-                    Remember Me
-                  </label>
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-[#833f25]"
-                    onClick={() => switchMode('forgot')}
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-              )}
-
-              {mode === 'register' && (
-                <label className="flex items-start gap-1.5 text-[0.72rem] leading-snug text-gray-500">
-                  <input type="checkbox" required className="mt-0.5 accent-[#17130f]" />
-                  I agree to the Terms &amp; Conditions and Privacy Policy
-                </label>
-              )}
-
-              {formError && <p className="-mt-1 text-xs font-medium text-[#4a372a]">{formError}</p>}
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="mt-1 w-full rounded-xl bg-gradient-to-r from-[#e4dccd] to-[#833f25] py-3 text-sm font-bold text-white shadow-[0_10px_25px_rgba(166,124,27,0.3)] transition-transform hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(166,124,27,0.38)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-              >
-                {submitting
-                  ? 'Please wait…'
-                  : mode === 'login'
-                  ? 'Login'
-                  : mode === 'register'
-                  ? 'Sign Up'
-                  : mode === 'forgot'
-                  ? 'Send Reset Link'
-                  : 'Reset Password'}
-              </button>
-            </form>
-
-            {/* SOCIAL LOGIN */}
-            {mode === 'login' && (
+          <form className="auth-form" onSubmit={onSubmit} noValidate={false}>
+            {mode === 'register' && (
               <>
-                <div className="my-4 flex items-center gap-3">
-                  <span className="h-px flex-1 bg-[#e4dccd]" />
-                  <span className="whitespace-nowrap text-[0.7rem] text-gray-400">Or continue with</span>
-                  <span className="h-px flex-1 bg-[#e4dccd]" />
+                <div className="field">
+                  <label className="field-label" htmlFor="a-name">Full name</label>
+                  <input id="a-name" className="input" autoComplete="name" required {...field('name')} />
                 </div>
-
-                <div className="flex gap-2.5">
-                  <button
-                    type="button"
-                    aria-label="Continue with Google"
-                    onClick={loginWithGoogle}
-                    className="flex flex-1 items-center justify-center rounded-xl border border-[#e4dccd] bg-white py-2.5 text-gray-700 transition-colors hover:border-[#17130f] hover:bg-[#faf8f4]"
-                  >
-                    <FaGoogle />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Continue with Facebook"
-                    onClick={loginWithFacebook}
-                    className="flex flex-1 items-center justify-center rounded-xl border border-[#e4dccd] bg-white py-2.5 text-gray-700 transition-colors hover:border-[#17130f] hover:bg-[#faf8f4]"
-                  >
-                    <FaFacebookF />
-                  </button>
+                <div className="field">
+                  <label className="field-label" htmlFor="a-phone">Phone number</label>
+                  <input id="a-phone" type="tel" className="input" autoComplete="tel" {...field('phone')} />
                 </div>
               </>
             )}
 
-            {/* SWITCH LINKS */}
+            {(mode === 'login' || mode === 'register' || mode === 'forgot') && (
+              <div className="field">
+                <label className="field-label" htmlFor="a-email">Email address</label>
+                <input id="a-email" type="email" className="input" autoComplete="email" required {...field('email')} />
+              </div>
+            )}
+
+            {(mode === 'login' || mode === 'register' || mode === 'reset') && (
+              <div className="field">
+                <label className="field-label" htmlFor="a-pw">{mode === 'reset' ? 'New password' : 'Password'}</label>
+                <div className="pw-wrap">
+                  <input id="a-pw" type={pwType} className="input" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required minLength={8} {...field('password')} />
+                  <PwToggle />
+                </div>
+                {mode !== 'login' && <span className="field-hint">At least 8 characters.</span>}
+              </div>
+            )}
+
+            {(mode === 'register' || mode === 'reset') && (
+              <div className="field">
+                <label className="field-label" htmlFor="a-pw2">Confirm password</label>
+                <input id="a-pw2" type={pwType} className="input" autoComplete="new-password" required minLength={8} {...field('confirmPassword')} />
+              </div>
+            )}
+
             {mode === 'login' && (
-              <p className="mt-4 text-center text-sm text-gray-500">
-                Don't have an account?{' '}
-                <button type="button" className="font-bold text-[#833f25]" onClick={() => switchMode('register')}>
-                  Sign Up
-                </button>
-              </p>
+              <div className="auth-row">
+                <label className="check"><input type="checkbox" defaultChecked /> Remember me</label>
+                <button type="button" className="link-u" onClick={() => switchMode('forgot')}>Forgot password?</button>
+              </div>
             )}
 
             {mode === 'register' && (
-              <p className="mt-4 text-center text-sm text-gray-500">
-                Already have an account?{' '}
-                <button type="button" className="font-bold text-[#833f25]" onClick={() => switchMode('login')}>
-                  Sign In
-                </button>
-              </p>
+              <label className="check auth-terms">
+                <input type="checkbox" required />
+                <span>I agree to the <Link to="/policy/terms" className="link-u">Terms</Link> and <Link to="/policy/privacy" className="link-u">Privacy Policy</Link></span>
+              </label>
             )}
 
-            {mode === 'forgot' && (
-              <p className="mt-4 text-center text-sm text-gray-500">
-                Remember your password?{' '}
-                <button type="button" className="font-bold text-[#833f25]" onClick={() => switchMode('login')}>
-                  Sign In
-                </button>
-              </p>
-            )}
+            {formError && <p className="form-alert form-alert-error" role="alert">{formError}</p>}
 
-            {mode === 'reset' && (
-              <p className="mt-4 text-center text-sm text-gray-500">
-                Remember your password?{' '}
-                <button type="button" className="font-bold text-[#833f25]" onClick={() => switchMode('login')}>
-                  Sign In
-                </button>
-              </p>
-            )}
+            <Button type="submit" size="lg" block loading={submitting}>
+              {submitting ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : mode === 'forgot' ? 'Send reset link' : 'Reset password'}
+            </Button>
+          </form>
 
-            <Link to="/" className="mt-3.5 block text-center text-xs text-gray-400 hover:text-[#833f25]">
-              ← Back to Home
-            </Link>
-          </div>
+          {mode === 'login' && (
+            <>
+              <div className="auth-or"><span>Or continue with</span></div>
+              <div className="auth-social">
+                <button type="button" onClick={loginWithGoogle} aria-label="Continue with Google"><FaGoogle /> Google</button>
+                <button type="button" onClick={loginWithFacebook} aria-label="Continue with Facebook"><FaFacebookF /> Facebook</button>
+              </div>
+            </>
+          )}
+
+          <p className="auth-switch">
+            {mode === 'login' && <>New here? <button type="button" className="link-u" onClick={() => switchMode('register')}>Create an account</button></>}
+            {mode === 'register' && <>Already have an account? <button type="button" className="link-u" onClick={() => switchMode('login')}>Sign in</button></>}
+            {(mode === 'forgot' || mode === 'reset') && <>Remember your password? <button type="button" className="link-u" onClick={() => switchMode('login')}>Sign in</button></>}
+          </p>
         </div>
       </div>
     </div>

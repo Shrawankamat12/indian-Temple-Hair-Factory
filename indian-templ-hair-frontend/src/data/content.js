@@ -1,6 +1,6 @@
-import catExtensions from '../assets/photos/cat-extensions.jpg';
+import catExtensions from '../assets/photos/factory-wefting.jpg';
 import catWigs from '../assets/photos/cat-wigs.jpg';
-import catClosures from '../assets/photos/cat-closures.jpg';
+import catClosures from '../assets/photos/factory-sorting.jpg';
 import catRawBundles from '../assets/photos/cat-rawbundles.jpg';
 
 export const megaMenu = [

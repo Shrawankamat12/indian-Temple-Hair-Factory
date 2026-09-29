@@ -14,6 +14,7 @@ const TYPES = [
   { value: 'hairDensity', label: 'Hair Density' },
   { value: 'hairWeight', label: 'Hair Weight' },
   { value: 'hairOrigin', label: 'Hair Origin' },
+  { value: 'laceType', label: 'Lace Type' },
 ];
 
 export default function AttributeList() {
@@ -37,9 +38,12 @@ export default function AttributeList() {
     { name: 'name', label: 'Name', required: true, placeholder: 'e.g. Kinky Straight, 18 inch, Natural Black' },
     { name: 'value', label: 'Value / Code', placeholder: 'Internal value used in variant SKUs', hint: 'Optional short code, e.g. "18in", "1B"' },
     { name: 'colorSwatch', label: 'Colour Swatch', type: activeType === 'hairColour' ? 'text' : undefined, placeholder: activeType === 'hairColour' ? '#1a1a1a' : undefined },
+    { name: 'image', label: 'Thumbnail Image', type: 'image', hint: 'Round tile on the storefront Home page (Shop by Texture). Recommended 400×400 px, square.' },
     { name: 'sortOrder', label: 'Sort Order', type: 'number', placeholder: '0' },
     { name: 'status', label: 'Active', type: 'switch', switchLabel: 'Visible in product forms & storefront filters' },
-  ].filter((f) => activeType === 'hairColour' || f.name !== 'colorSwatch');
+  ]
+    .filter((f) => activeType === 'hairColour' || f.name !== 'colorSwatch')
+    .filter((f) => ['hairTexture', 'hairType'].includes(activeType) || f.name !== 'image');
 
   const columns = [
     { key: 'name', label: 'Name', sortable: true },

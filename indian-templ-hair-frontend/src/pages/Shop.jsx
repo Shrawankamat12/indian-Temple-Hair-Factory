@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FiX } from 'react-icons/fi';
+import { FiX, FiSliders, FiGrid, FiList, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import PageHeader from '../components/PageHeader';
-import ProductCard from '../components/ProductCard';
-import FilterAccordion from '../components/FilterAccordion';
+import ProductGrid from '../components/ProductGrid';
+import FilterPanel from '../components/FilterPanel';
 import QuickView from '../components/QuickView';
 import RecentlyViewed from '../components/RecentlyViewed';
+import Button from '../components/Button';
 import { ProductGridSkeleton } from '../components/Skeletons';
 import { ErrorState, EmptyState } from '../components/StateBlocks';
 import {
-  useProducts, useCategories, useSubCategories, useBrands, useCollections, useAttributes,
+  useProducts, useCategories, useSubCategories, useBrands, useCollections, useAttributes, useBanners,
 } from '../hooks/useStoreData';
+import { imageOr } from '../lib/media';
 import { useRecentlyViewedList } from '../hooks/useRecentlyViewed';
 
 // Length is a numeric field on the product (inches), so it stays a computed bucket rather than
@@ -21,6 +23,16 @@ const LENGTHS = [
   { id: 'l', label: '22–28"', test: (l) => l >= 22 && l <= 28 },
   { id: 'xl', label: '30"+', test: (l) => l >= 30 },
 ];
+const PAGE_SIZE = 12;
+const SORTS = [
+  { value: 'featured', label: 'Sort: Featured' },
+  { value: 'popularity', label: 'Popularity' },
+  { value: 'price-asc', label: 'Price: Low to High' },
+  { value: 'price-desc', label: 'Price: High to Low' },
+  { value: 'rating', label: 'Rating' },
+  { value: 'newest', label: 'Newest' },
+];
+const hasVariant = (p, key, value) => (p.variants || []).some((v) => v[key] === value);
 
 export default function Shop() {
   const { products, loading, error, refetch } = useProducts({ limit: 100 });
@@ -34,6 +46,9 @@ export default function Shop() {
   const { attributes: hairTypeAttrs } = useAttributes('hairType');
   const { attributes: textureAttrs } = useAttributes('hairTexture');
   const { attributes: colorAttrs } = useAttributes('hairColour');
+  const { attributes: laceAttrs } = useAttributes('laceType');
+  const { attributes: densityAttrs } = useAttributes('hairDensity');
+  const { banners: topBanners } = useBanners('category-top');
 
   const [cat, setCat] = useState(null);
   const [subCat, setSubCat] = useState(null);
@@ -43,36 +58,51 @@ export default function Shop() {
   const [texture, setTexture] = useState(null);
   const [length, setLength] = useState(null);
   const [color, setColor] = useState(null);
+  const [laceType, setLaceType] = useState(null);
+  const [density, setDensity] = useState(null);
+  const [onSale, setOnSale] = useState(false);
+  const [view, setView] = useState('grid');
   const [rating, setRating] = useState(null);
   const [maxPrice, setMaxPrice] = useState(35000);
   const [sort, setSort] = useState('featured');
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [page, setPage] = useState(1);
 
   const activeCategory = categories.find((c) => c.id === cat);
   const { subcategories } = useSubCategories(activeCategory?._id);
 
-  // Pre-select a collection when arriving from a Home page "Shop by Collection" link
+  // Pre-select a collection when arriving from a "Shop by Collection" link.
+  // When the param is absent (e.g. the nav's "All products" link) the filter is cleared.
   useEffect(() => {
-    const fromUrl = searchParams.get('collection');
-    if (fromUrl) setCollection(fromUrl);
+    setCollection(searchParams.get('collection') || null);
   }, [searchParams]);
 
-  // Pre-select a category when arriving from a Home page "Shop by Category" circle
-  // (CategoryCircle links to /shop?category=<slug>, and `cat` here is matched against
-  // categories[].id, which normalizeCategory sets to the category's slug).
+  // Pre-select a category when arriving from a category tile / mega menu
+  // (links go to /shop?category=<slug>; `cat` is matched against categories[].id,
+  // which normalizeCategory sets to the category's slug).
   useEffect(() => {
-    const fromUrl = searchParams.get('category');
-    if (fromUrl) setCat(fromUrl);
+    setCat(searchParams.get('category') || null);
+  }, [searchParams]);
+
+  // Other deep links: /shop?texture=Body%20Wave, ?hairType=, ?laceType=, ?sort=newest, ?onSale=1
+  useEffect(() => {
+    setTexture(searchParams.get('texture') || null);
+    setHairType(searchParams.get('hairType') || null);
+    setLaceType(searchParams.get('laceType') || null);
+    setOnSale(searchParams.get('onSale') === '1');
+    const sortParam = searchParams.get('sort');
+    setSort(SORTS.some((o) => o.value === sortParam) ? sortParam : 'featured');
   }, [searchParams]);
 
   function reset() {
     setCat(null); setSubCat(null); setBrand(null); setCollection(null);
     setHairType(null); setTexture(null); setLength(null);
-    setColor(null); setRating(null); setMaxPrice(35000); setSort('featured');
+    setColor(null); setLaceType(null); setDensity(null); setOnSale(false);
+    setRating(null); setMaxPrice(35000); setSort('featured');
   }
 
-  const activeFilterCount = [cat, subCat, brand, collection, hairType, texture, length, color, rating].filter(Boolean).length
+  const activeFilterCount = [cat, subCat, brand, collection, hairType, texture, length, color, laceType, density, rating, onSale].filter(Boolean).length
     + (maxPrice < 35000 ? 1 : 0);
 
   const filtered = useMemo(() => {
@@ -82,7 +112,10 @@ export default function Shop() {
       if (brand && p.brand !== brand) return false;
       if (collection && p.collectionRef !== collection) return false;
       if (hairType && p.hairType !== hairType) return false;
-      if (texture && p.texture !== texture) return false;
+      if (texture && p.texture !== texture && p.hairTexture !== texture && !hasVariant(p, 'texture', texture)) return false;
+      if (laceType && p.laceType !== laceType && !hasVariant(p, 'laceType', laceType)) return false;
+      if (density && p.hairDensity !== density && !hasVariant(p, 'density', density)) return false;
+      if (onSale && !(p.discountPct > 0)) return false;
       if (length && !LENGTHS.find((l) => l.id === length).test(p.length)) return false;
       if (color && p.color !== color) return false;
       if (rating && p.rating < rating) return false;
@@ -92,151 +125,103 @@ export default function Shop() {
     if (sort === 'price-asc') list = [...list].sort((a, b) => a.price - b.price);
     if (sort === 'price-desc') list = [...list].sort((a, b) => b.price - a.price);
     if (sort === 'rating') list = [...list].sort((a, b) => b.rating - a.rating);
+    if (sort === 'popularity') list = [...list].sort((a, b) => b.reviews - a.reviews || b.rating - a.rating);
     if (sort === 'newest') list = [...list].sort((a, b) => (b.newArrival || b.badge === 'New') - (a.newArrival || a.badge === 'New'));
     return list;
-  }, [products, cat, subCat, brand, collection, hairType, texture, length, color, rating, maxPrice, sort]);
+  }, [products, cat, subCat, brand, collection, hairType, texture, length, color, laceType, density, onSale, rating, maxPrice, sort]);
 
-  const filterPanel = (
-    <>
-      <div className="shop-filters-head">
-        <h3>Filters</h3>
-        {activeFilterCount > 0 && <button className="shop-reset" onClick={reset}>Reset ({activeFilterCount})</button>}
-      </div>
+  // show the first page again whenever the result set changes
+  useEffect(() => { setPage(1); }, [filtered]);
 
-      <FilterAccordion title="Price Range">
-        <input
-          type="range" min="4000" max="35000" step="500" value={maxPrice} className="facc-range"
-          onChange={(e) => setMaxPrice(Number(e.target.value))}
-        />
-        <div className="facc-range-labels"><span>₹4,000</span><span>Up to ₹{maxPrice.toLocaleString('en-IN')}</span></div>
-      </FilterAccordion>
+  const panelProps = {
+    data: { categories, subcategories, brands, collections, hairTypeAttrs, textureAttrs, colorAttrs, laceAttrs, densityAttrs },
+    state: { cat, subCat, brand, collection, hairType, texture, length, color, laceType, density, rating, maxPrice },
+    set: { cat: setCat, subCat: setSubCat, brand: setBrand, collection: setCollection, hairType: setHairType, texture: setTexture, length: setLength, color: setColor, laceType: setLaceType, density: setDensity, rating: setRating, maxPrice: setMaxPrice },
+    activeCount: activeFilterCount, onReset: reset, lengths: LENGTHS,
+    onApply: () => { setFiltersOpen(false); document.getElementById('shop-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+  };
 
-      {categories.length > 0 && (
-        <FilterAccordion title="Category">
-          <div className="facc-chip-row">
-            {categories.map((c) => (
-              <button key={c.id} className={`facc-chip ${cat === c.id ? 'active' : ''}`} onClick={() => { setCat(cat === c.id ? null : c.id); setSubCat(null); }}>
-                {c.name}
-              </button>
-            ))}
-          </div>
-        </FilterAccordion>
-      )}
+  const activeChips = [
+    activeCategory && { label: activeCategory.name, clear: () => { setCat(null); setSubCat(null); } },
+    hairType && { label: hairType, clear: () => setHairType(null) },
+    texture && { label: texture, clear: () => setTexture(null) },
+    length && { label: LENGTHS.find((l) => l.id === length)?.label, clear: () => setLength(null) },
+    color && { label: color, clear: () => setColor(null) },
+    laceType && { label: laceType, clear: () => setLaceType(null) },
+    density && { label: `${density} density`, clear: () => setDensity(null) },
+    onSale && { label: 'On offer', clear: () => setOnSale(false) },
+    rating && { label: `${rating}+ stars`, clear: () => setRating(null) },
+    maxPrice < 35000 && { label: `Up to ₹${maxPrice.toLocaleString('en-IN')}`, clear: () => setMaxPrice(35000) },
+  ].filter(Boolean);
 
-      {cat && subcategories.length > 0 && (
-        <FilterAccordion title="Sub Category">
-          <div className="facc-chip-row">
-            {subcategories.map((s) => (
-              <button key={s._id} className={`facc-chip ${subCat === s._id ? 'active' : ''}`} onClick={() => setSubCat(subCat === s._id ? null : s._id)}>{s.name}</button>
-            ))}
-          </div>
-        </FilterAccordion>
-      )}
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const shown = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const goPage = (n) => { setPage(n); document.getElementById('shop-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
-      {brands.length > 0 && (
-        <FilterAccordion title="Brand" defaultOpen={false}>
-          <div className="facc-chip-row">
-            {brands.map((b) => (
-              <button key={b._id} className={`facc-chip ${brand === b._id ? 'active' : ''}`} onClick={() => setBrand(brand === b._id ? null : b._id)}>{b.name}</button>
-            ))}
-          </div>
-        </FilterAccordion>
-      )}
-
-      {collections.length > 0 && (
-        <FilterAccordion title="Collection" defaultOpen={false}>
-          <div className="facc-chip-row">
-            {collections.map((c) => (
-              <button key={c._id} className={`facc-chip ${collection === c._id ? 'active' : ''}`} onClick={() => setCollection(collection === c._id ? null : c._id)}>{c.name}</button>
-            ))}
-          </div>
-        </FilterAccordion>
-      )}
-
-      {hairTypeAttrs.length > 0 && (
-        <FilterAccordion title="Hair Type">
-          <div className="facc-chip-row">
-            {hairTypeAttrs.map((h) => (
-              <button key={h._id} className={`facc-chip ${hairType === h.name ? 'active' : ''}`} onClick={() => setHairType(hairType === h.name ? null : h.name)}>{h.name}</button>
-            ))}
-          </div>
-        </FilterAccordion>
-      )}
-
-      {textureAttrs.length > 0 && (
-        <FilterAccordion title="Texture">
-          <div className="facc-chip-row">
-            {textureAttrs.map((t) => (
-              <button key={t._id} className={`facc-chip ${texture === t.name ? 'active' : ''}`} onClick={() => setTexture(texture === t.name ? null : t.name)}>{t.name}</button>
-            ))}
-          </div>
-        </FilterAccordion>
-      )}
-
-      <FilterAccordion title="Length" defaultOpen={false}>
-        <div className="facc-chip-row">
-          {LENGTHS.map((l) => (
-            <button key={l.id} className={`facc-chip ${length === l.id ? 'active' : ''}`} onClick={() => setLength(length === l.id ? null : l.id)}>{l.label}</button>
-          ))}
-        </div>
-      </FilterAccordion>
-
-      {colorAttrs.length > 0 && (
-        <FilterAccordion title="Color" defaultOpen={false}>
-          <div className="facc-chip-row">
-            {colorAttrs.map((c) => (
-              <button key={c._id} className={`facc-chip ${color === c.name ? 'active' : ''}`} onClick={() => setColor(color === c.name ? null : c.name)}>
-                {c.colorSwatch && <span className="facc-swatch" style={{ background: c.colorSwatch }} />}
-                {c.name}
-              </button>
-            ))}
-          </div>
-        </FilterAccordion>
-      )}
-
-      <FilterAccordion title="Rating" defaultOpen={false}>
-        {[4, 4.5].map((r) => (
-          <label className="facc-check" key={r}>
-            <input type="checkbox" checked={rating === r} onChange={() => setRating(rating === r ? null : r)} />
-            {r}★ &amp; above
-          </label>
-        ))}
-      </FilterAccordion>
-    </>
-  );
+  // Banner: the selected category's own banner, else the first `category-top` banner, else a plain dark band.
+  const topBanner = topBanners[0];
+  const bannerImage = imageOr(activeCategory?.banner) || imageOr(topBanner?.img) || imageOr(activeCategory?.image);
+  const bannerTitle = activeCategory?.name || topBanner?.title || 'The Complete Collection';
+  const bannerLede = (activeCategory ? (activeCategory.tag || activeCategory.description) : topBanner?.subtitle) || 'Virgin, remy & raw hair, hand-inspected at our Delhi factory.';
 
   return (
     <>
       <PageHeader
-        crumbs={[{ label: 'Shop' }]}
-        title="The Complete Collection"
-        lede="Virgin, remy &amp; raw hair, hand-inspected at our Delhi factory."
+        crumbs={activeCategory ? [{ label: 'Shop', to: '/shop' }, { label: activeCategory.name }] : [{ label: 'Shop' }]}
+        title={bannerTitle}
+        lede={bannerLede}
+        image={bannerImage}
+        tall
       />
 
-      <div className="sticky-toolbar shop-toolbar-sticky">
+      {categories.length > 0 && (
+        <nav className="shop-cats" aria-label="Categories">
+          <div className="container shop-cats-row">
+            <button type="button" className="chip" aria-pressed={!cat} onClick={() => { setCat(null); setSubCat(null); }}>All</button>
+            {categories.map((c) => (
+              <button key={c.id} type="button" className="chip" aria-pressed={cat === c.id} onClick={() => { setCat(cat === c.id ? null : c.id); setSubCat(null); }}>{c.name}</button>
+            ))}
+          </div>
+        </nav>
+      )}
+
+      <div className="shop-toolbar-wrap">
         <div className="container shop-toolbar">
-          <button className="shop-filter-toggle" onClick={() => setFiltersOpen(true)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round"/></svg>
-            Filters {activeFilterCount > 0 && <span className="shop-filter-count">{activeFilterCount}</span>}
+          <button type="button" className="btn btn-outline btn-sm shop-filter-btn" onClick={() => setFiltersOpen(true)}>
+            <FiSliders size={15} aria-hidden="true" /> Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
           </button>
-          <span className="shop-count-label">{loading ? 'Loading…' : `Showing ${filtered.length} of ${products.length}`}</span>
-          <select value={sort} onChange={(e) => setSort(e.target.value)}>
-            <option value="featured">Sort: Featured</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
-            <option value="rating">Rating</option>
-            <option value="newest">Newest</option>
-          </select>
+          <p className="shop-count" role="status">{loading ? 'Loading…' : `${filtered.length} ${filtered.length === 1 ? 'product' : 'products'}`}</p>
+          <div className="shop-sort">
+            <label htmlFor="sort" className="sr-only">Sort products</label>
+            <select id="sort" className="select" value={sort} onChange={(e) => setSort(e.target.value)}>
+              {SORTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div className="shop-view" role="group" aria-label="Layout">
+            <button type="button" aria-pressed={view === 'grid'} onClick={() => setView('grid')} aria-label="Grid view"><FiGrid size={17} /></button>
+            <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')} aria-label="List view"><FiList size={17} /></button>
+          </div>
         </div>
       </div>
 
-      <div className="section shop-section">
+      <div className="section section--tight">
         <div className="container shop-layout">
-          <aside className="shop-filters glass">
-            {filterPanel}
+          <aside className="shop-side" aria-label="Filters">
+            <FilterPanel {...panelProps} />
           </aside>
 
-          <div className="shop-main">
+          <div className="shop-main" id="shop-results">
+            {activeChips.length > 0 && (
+              <div className="shop-active" aria-label="Active filters">
+                {activeChips.map((c) => (
+                  <button key={c.label} type="button" className="chip is-active" onClick={c.clear} aria-label={`Remove filter ${c.label}`}>
+                    {c.label} <FiX size={13} aria-hidden="true" />
+                  </button>
+                ))}
+                <button type="button" className="link-u" onClick={reset}>Clear all</button>
+              </div>
+            )}
+
             {loading ? (
               <ProductGridSkeleton count={9} />
             ) : error ? (
@@ -244,35 +229,39 @@ export default function Shop() {
             ) : filtered.length === 0 ? (
               <EmptyState
                 title="No pieces match those filters yet."
-                message="Try widening your price range or clearing a filter — our full collection has 100+ factory-direct pieces."
-                action={<button className="btn btn-outline on-light" onClick={reset}>Clear Filters</button>}
+                message="Try widening your price range or clearing a filter."
+                action={<Button variant="outline" onClick={reset}>Clear filters</Button>}
               />
             ) : (
-              <div className="shop-grid">
-                {filtered.map((p, i) => (
-                  <ProductCard product={p} key={p.id} style={{ animationDelay: `${(i % 3) * 80}ms` }} onQuickView={setQuickViewProduct} />
-                ))}
-              </div>
+              <>
+                <ProductGrid products={shown} onQuickView={setQuickViewProduct} columns={3} view={view} />
+                {pages > 1 && (
+                  <nav className="pager" aria-label="Pagination">
+                    <button type="button" className="pager-btn" onClick={() => goPage(page - 1)} disabled={page === 1} aria-label="Previous page"><FiChevronLeft size={16} /></button>
+                    {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
+                      <button type="button" key={n} className={`pager-btn ${n === page ? 'is-active' : ''}`} onClick={() => goPage(n)} aria-label={`Page ${n}`} aria-current={n === page ? 'page' : undefined}>{n}</button>
+                    ))}
+                    <button type="button" className="pager-btn" onClick={() => goPage(page + 1)} disabled={page === pages} aria-label="Next page"><FiChevronRight size={16} /></button>
+                  </nav>
+                )}
+              </>
             )}
           </div>
         </div>
       </div>
 
       <RecentlyViewed items={recentlyViewed} />
-
       <QuickView product={quickViewProduct} onClose={() => setQuickViewProduct(null)} />
 
-      <div className={`overlay-backdrop ${filtersOpen ? 'open' : ''}`} onClick={() => setFiltersOpen(false)} />
-      <aside className={`shop-filters-drawer ${filtersOpen ? 'open' : ''}`}>
-        <div className="shop-filters-drawer-top">
+      <div className={`overlay-backdrop ${filtersOpen ? 'open' : ''}`} onClick={() => setFiltersOpen(false)} aria-hidden="true" />
+      <aside className={`fdrawer ${filtersOpen ? 'open' : ''}`} aria-hidden={!filtersOpen} aria-label="Filters">
+        <div className="fdrawer-top">
           <h3>Filters</h3>
-          <button onClick={() => setFiltersOpen(false)} aria-label="Close filters"><FiX /></button>
+          <button type="button" className="icon-btn" onClick={() => setFiltersOpen(false)} aria-label="Close filters"><FiX size={20} /></button>
         </div>
-        <div className="shop-filters-drawer-body">{filterPanel}</div>
-        <div className="shop-filters-drawer-foot">
-          <button className="btn btn-gold" style={{ width: '100%' }} onClick={() => setFiltersOpen(false)}>
-            Show {filtered.length} Results
-          </button>
+        <div className="fdrawer-body"><FilterPanel {...panelProps} /></div>
+        <div className="fdrawer-foot">
+          <Button block onClick={() => setFiltersOpen(false)}>Show {filtered.length} results</Button>
         </div>
       </aside>
     </>

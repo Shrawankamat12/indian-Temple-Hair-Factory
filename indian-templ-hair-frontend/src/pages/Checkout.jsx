@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 
 import {
   FiCheck,
@@ -15,7 +14,7 @@ import {
   FiBriefcase,
 } from 'react-icons/fi';
 
-import PageHeader from '../components/PageHeader';
+import Button from '../components/Button';
 import { useStore } from '../context/StoreContext';
 import { rupee } from '../lib/format';
 import { ordersApi, paymentsApi } from '../lib/resources';
@@ -25,11 +24,11 @@ import { useCompanyInfo } from '../hooks/useStoreData';
 
 const STEPS = [
   {
-    label: 'Address',
+    label: 'Shipping Address',
     icon: FiMapPin,
   },
   {
-    label: 'Shipping',
+    label: 'Delivery Options',
     icon: FiTruck,
   },
   {
@@ -120,6 +119,9 @@ export default function Checkout() {
   const [placing, setPlacing] = useState(false);
 
   const [formError, setFormError] = useState('');
+
+  // UI only: after a failed "Continue" on the address step, flag empty required fields.
+  const [attempted, setAttempted] = useState(false);
 
   const [selectedSavedId, setSelectedSavedId] = useState(null);
 
@@ -440,6 +442,7 @@ export default function Checkout() {
      * Address validation.
      */
     if (step === 0 && !addressValid()) {
+      setAttempted(true);
       setFormError(
         'Please fill in name, phone, address, city and pincode.'
       );
@@ -485,976 +488,209 @@ export default function Checkout() {
     );
   }
 
+  const stepTitle = ['Delivery address', 'Shipping method', 'Payment method', 'Review your order'][step];
+  const ship = shipMethod === 'express' ? 'Express' : 'Standard';
+  const req = (key) => attempted && step === 0 && !address[key];
+
   return (
     <>
-      <PageHeader
-        crumbs={[
-          {
-            label: 'Cart',
-            to: '/cart',
-          },
-          {
-            label: 'Checkout',
-          },
-        ]}
-        title="Checkout"
-      />
+      <div className="container page-title-row"><h1 className="page-title">Checkout</h1></div>
 
-      <div
-        className="section"
-        style={{ paddingTop: 20 }}
-      >
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
+      <div className="section section--tight">
+        <div className="container co-grid">
+          <div className="co-main">
+            {/* ---------- step indicator ---------- */}
+            <ol className="steps" aria-label="Checkout progress">
+              {STEPS.map((s, i) => (
+                <li key={s.label} className={i < step ? 'is-done' : i === step ? 'is-current' : ''} aria-current={i === step ? 'step' : undefined}>
+                  <span className="steps-dot num">{i < step ? <FiCheck size={14} aria-hidden="true" /> : i + 1}</span>
+                  <span className="steps-label">{s.label}</span>
+                </li>
+              ))}
+            </ol>
 
-            {/* =====================================================
-                MAIN COLUMN
-            ====================================================== */}
+            <section className="co-card" aria-labelledby="co-title">
+              <h2 id="co-title" className="co-title">{stepTitle}</h2>
 
-            <div>
-
-              {/* =================================================
-                  STEPS
-              ================================================== */}
-
-              <div className="mb-6 flex items-center justify-between">
-                {STEPS.map((item, index) => {
-                  const Icon = item.icon;
-
-                  const active =
-                    index === step;
-
-                  const done =
-                    index < step;
-
-                  return (
-                    <div
-                      key={item.label}
-                      className="flex flex-1 items-center"
-                    >
-                      <div className="flex flex-col items-center gap-1.5">
-
-                        <span
-                          className={`
-                            flex h-9 w-9
-                            items-center justify-center
-                            rounded-full
-                            text-sm font-semibold
-                            transition-all duration-300
-                            ${
-                              done
-                                ? 'bg-gradient-to-br from-[#e4dccd] to-[#17130f] text-white'
-                                : active
-                                ? 'bg-gradient-to-br from-[#e4dccd] to-[#833f25] text-white shadow-[0_6px_16px_rgba(166,124,27,0.35)]'
-                                : 'bg-gray-100 text-gray-400'
-                            }
-                          `}
-                        >
-                          {done ? (
-                            <FiCheck size={16} />
-                          ) : (
-                            <Icon size={15} />
-                          )}
-                        </span>
-
-                        <span
-                          className={`
-                            text-[11px] font-medium
-                            ${
-                              active
-                                ? 'text-[#17130f]'
-                                : done
-                                ? 'text-gray-600'
-                                : 'text-gray-400'
-                            }
-                          `}
-                        >
-                          {item.label}
-                        </span>
-                      </div>
-
-                      {index <
-                        STEPS.length - 1 && (
-                        <div
-                          className={`
-                            mx-2 h-[2px]
-                            flex-1 rounded
-                            transition-colors duration-300
-                            ${
-                              done
-                                ? 'bg-[#17130f]'
-                                : 'bg-gray-200'
-                            }
-                          `}
-                        />
-                      )}
+              {/* ================= STEP 0: ADDRESS ================= */}
+              {step === 0 && (
+                <div className="co-body">
+                  {!user && (
+                    <div className="seg" role="group" aria-label="Checkout type">
+                      <button type="button" className="is-on" aria-pressed="true">Guest checkout</button>
+                      <button type="button" aria-pressed="false" onClick={() => navigate('/login', { state: { from: '/checkout' } })}>Sign in instead</button>
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* =================================================
-                  PANEL
-              ================================================== */}
-
-              <div className="rounded-2xl border border-black/5 bg-white p-6 shadow-[0_20px_50px_-30px_rgba(166,124,27,0.25)]">
-
-                <AnimatePresence mode="wait">
-
-                  <motion.div
-                    key={step}
-                    initial={{
-                      opacity: 0,
-                      x: 12,
-                    }}
-                    animate={{
-                      opacity: 1,
-                      x: 0,
-                    }}
-                    exit={{
-                      opacity: 0,
-                      x: -12,
-                    }}
-                    transition={{
-                      duration: 0.25,
-                    }}
-                  >
-
-                    {/* =================================================
-                        STEP 0 — ADDRESS
-                    ================================================== */}
-
-                    {step === 0 && (
-                      <div>
-
-                        {!user && (
-                          <div className="mb-5 flex gap-2 rounded-full bg-[#faf8f4] p-1">
-
-                            <button
-                              type="button"
-                              className="flex-1 rounded-full bg-white py-2 text-sm font-semibold text-gray-900 shadow-sm"
-                            >
-                              Guest Checkout
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                navigate('/login', {
-                                  state: {
-                                    from: '/checkout',
-                                  },
-                                })
-                              }
-                              className="flex-1 rounded-full py-2 text-sm font-medium text-gray-500 transition-colors hover:text-[#17130f]"
-                            >
-                              Sign In Instead
-                            </button>
-
-                          </div>
-                        )}
-
-                        {/* =================================================
-                            SAVED ADDRESSES
-                        ================================================== */}
-
-                        {savedAddresses.length > 0 && (
-                          <div className="mb-5">
-
-                            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                              Saved Address
-                              {savedAddresses.length > 1
-                                ? 'es'
-                                : ''}
-                            </h4>
-
-                            <div className="flex flex-col gap-2">
-
-                              {savedAddresses.map(
-                                (saved) => {
-                                  const id =
-                                    saved.id ||
-                                    saved._id ||
-                                    'default';
-
-                                  const isSelected =
-                                    selectedSavedId ===
-                                      id &&
-                                    !showNewForm;
-
-                                  return (
-                                    <button
-                                      key={id}
-                                      type="button"
-                                      onClick={() =>
-                                        applySavedAddress(
-                                          saved
-                                        )
-                                      }
-                                      className={`
-                                        flex items-start gap-3
-                                        rounded-xl border p-3
-                                        text-left
-                                        transition-all
-                                        ${
-                                          isSelected
-                                            ? 'border-[#17130f] bg-[#faf8f4] shadow-[0_4px_14px_rgba(166,124,27,0.15)]'
-                                            : 'border-gray-200 hover:border-[#e4dccd]'
-                                        }
-                                      `}
-                                    >
-
-                                      <span
-                                        className={`
-                                          mt-0.5 flex h-8 w-8
-                                          shrink-0 items-center
-                                          justify-center rounded-full
-                                          ${
-                                            isSelected
-                                              ? 'bg-gradient-to-br from-[#e4dccd] to-[#17130f] text-white'
-                                              : 'bg-gray-100 text-gray-400'
-                                          }
-                                        `}
-                                      >
-                                        <FiMapPin
-                                          size={14}
-                                        />
-                                      </span>
-
-                                      <span className="flex-1">
-
-                                        <span className="block text-sm font-semibold text-gray-900">
-                                          {saved.fullName ||
-                                            user?.name ||
-                                            'Saved address'}
-                                        </span>
-
-                                        <span className="block text-xs text-gray-500">
-                                          {saved.line1 ||
-                                            saved.address1}
-                                          , {saved.city}{' '}
-                                          {saved.pincode ||
-                                            saved.zip}
-                                        </span>
-
-                                      </span>
-
-                                      {isSelected && (
-                                        <FiCheck className="mt-1 shrink-0 text-[#17130f]" />
-                                      )}
-
-                                    </button>
-                                  );
-                                }
-                              )}
-
-                              {/* NEW ADDRESS */}
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setShowNewForm(
-                                    true
-                                  );
-
-                                  setSelectedSavedId(
-                                    null
-                                  );
-
-                                  setAddress(
-                                    emptyAddress
-                                  );
-
-                                  setFormError('');
-                                }}
-                                className={`
-                                  flex items-center
-                                  justify-between
-                                  rounded-xl
-                                  border border-dashed
-                                  p-3 text-left text-sm
-                                  font-medium
-                                  transition-colors
-                                  ${
-                                    showNewForm
-                                      ? 'border-[#17130f] bg-[#faf8f4] text-[#17130f]'
-                                      : 'border-gray-200 text-gray-500 hover:border-[#e4dccd] hover:text-[#17130f]'
-                                  }
-                                `}
-                              >
-                                Use a new address
-
-                                <FiChevronRight
-                                  size={14}
-                                />
-                              </button>
-
-                            </div>
-                          </div>
-                        )}
-
-                        {/* =================================================
-                            ADDRESS FORM
-                        ================================================== */}
-
-                        {showNewForm && (
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-
-                            <Field
-                              placeholder="Full Name"
-                              value={
-                                address.fullName
-                              }
-                              onChange={(value) =>
-                                updateField(
-                                  'fullName',
-                                  value
-                                )
-                              }
-                            />
-
-                            <Field
-                              placeholder="Phone Number"
-                              value={
-                                address.phone
-                              }
-                              onChange={(value) =>
-                                updateField(
-                                  'phone',
-                                  value
-                                )
-                              }
-                            />
-
-                            <Field
-                              className="sm:col-span-2"
-                              placeholder="Email Address"
-                              value={
-                                address.email
-                              }
-                              onChange={(value) =>
-                                updateField(
-                                  'email',
-                                  value
-                                )
-                              }
-                            />
-
-                            <Field
-                              className="sm:col-span-2"
-                              placeholder="Address Line 1"
-                              value={
-                                address.line1
-                              }
-                              onChange={(value) =>
-                                updateField(
-                                  'line1',
-                                  value
-                                )
-                              }
-                            />
-
-                            <Field
-                              placeholder="City"
-                              value={
-                                address.city
-                              }
-                              onChange={(value) =>
-                                updateField(
-                                  'city',
-                                  value
-                                )
-                              }
-                            />
-
-                            <Field
-                              placeholder="State"
-                              value={
-                                address.state
-                              }
-                              onChange={(value) =>
-                                updateField(
-                                  'state',
-                                  value
-                                )
-                              }
-                            />
-
-                            <Field
-                              placeholder="PIN Code"
-                              value={
-                                address.pincode
-                              }
-                              onChange={(value) =>
-                                updateField(
-                                  'pincode',
-                                  value
-                                )
-                              }
-                            />
-
-                            <Field
-                              placeholder="Country"
-                              value={
-                                address.country
-                              }
-                              onChange={(value) =>
-                                updateField(
-                                  'country',
-                                  value
-                                )
-                              }
-                            />
-
-                          </div>
-                        )}
-
-                      </div>
-                    )}
-
-                    {/* =================================================
-                        STEP 1 — SHIPPING
-                    ================================================== */}
-
-                    {step === 1 && (
-                      <div className="flex flex-col gap-3">
-
-                        <RadioCard
-                          active={
-                            shipMethod ===
-                            'standard'
-                          }
-                          onClick={() =>
-                            setShipMethod(
-                              'standard'
-                            )
-                          }
-                          title="Standard Shipping"
-                          sub={`3–6 business days · ${
-                            cartSubtotal > 15000
-                              ? 'Free'
-                              : rupee(499)
-                          }`}
-                          icon={FiTruck}
-                        />
-
-                        <RadioCard
-                          active={
-                            shipMethod ===
-                            'express'
-                          }
-                          onClick={() =>
-                            setShipMethod(
-                              'express'
-                            )
-                          }
-                          title="Express Shipping"
-                          sub={`1–2 business days · ${rupee(
-                            999
-                          )}`}
-                          icon={FiPackage}
-                        />
-
-                      </div>
-                    )}
-
-                    {/* =================================================
-                        STEP 2 — PAYMENT
-                    ================================================== */}
-
-                    {step === 2 && (
-                      <div>
-
-                        <div className="mb-4">
-                          <h3 className="text-base font-bold text-gray-900">
-                            Select Payment Method
-                          </h3>
-
-                          <p className="mt-1 text-xs text-gray-500">
-                            Choose how you want to
-                            pay for your order.
-                          </p>
-                        </div>
-
-                        <div className="flex flex-col gap-3">
-
-                          {PAYMENT_OPTIONS.map(
-                            (option) => (
-                              <RadioCard
-                                key={option.id}
-                                active={
-                                  payMethod ===
-                                  option.id
-                                }
-                                onClick={() =>
-                                  setPayMethod(
-                                    option.id
-                                  )
-                                }
-                                title={
-                                  option.title
-                                }
-                                sub={
-                                  option.sub
-                                }
-                                icon={
-                                  option.icon
-                                }
-                              />
-                            )
-                          )}
-
-                        </div>
-
-                        {payMethod !== 'cod' && (
-                          <div className="mt-4 flex items-start gap-2 rounded-xl bg-[#faf8f4] px-3 py-3 text-xs text-gray-500">
-
-                            <FiLock
-                              className="mt-0.5 shrink-0 text-[#17130f]"
-                              size={14}
-                            />
-
-                            <span>
-                              You will be securely
-                              redirected to Razorpay
-                              Checkout to complete
-                              your payment.
-                              <br />
-                              Card, UPI, Netbanking
-                              and other methods shown
-                              there depend on your
-                              Razorpay account and
-                              customer's availability.
-                            </span>
-
-                          </div>
-                        )}
-
-                        {payMethod === 'cod' && (
-                          <div className="mt-4 flex items-start gap-2 rounded-xl bg-[#faf8f4] px-3 py-3 text-xs text-gray-500">
-
-                            <FiPackage
-                              className="mt-0.5 shrink-0 text-[#17130f]"
-                              size={14}
-                            />
-
-                            <span>
-                              Pay in cash when your
-                              order is delivered.
-                            </span>
-
-                          </div>
-                        )}
-
-                      </div>
-                    )}
-
-                    {/* =================================================
-                        STEP 3 — REVIEW
-                    ================================================== */}
-
-                    {step === 3 && (
-                      <div className="divide-y divide-gray-100 text-sm">
-
-                        {cart.map((item) => (
-                          <div
-                            className="flex justify-between gap-4 py-2.5 text-gray-600"
-                            key={item.id}
-                          >
-                            <span>
-                              {item.name} ×{' '}
-                              {item.qty}
-                            </span>
-
-                            <span className="shrink-0 font-medium text-gray-900">
-                              {rupee(
-                                item.price *
-                                  item.qty
-                              )}
-                            </span>
-                          </div>
-                        ))}
-
-                        {appliedCoupon && (
-                          <div className="flex justify-between py-2.5 text-[#17130f]">
-
-                            <span>
-                              Coupon (
-                              {
-                                appliedCoupon.code
-                              }
-                              )
-                            </span>
-
-                            <span>
-                              −
-                              {rupee(
-                                discountAmount
-                              )}
-                            </span>
-
-                          </div>
-                        )}
-
-                        <div className="flex justify-between py-2.5 text-gray-600">
-
-                          <span>
-                            Shipping (
-                            {shipMethod}
-                            )
-                          </span>
-
-                          <span className="font-medium text-gray-900">
-                            {shippingCost ===
-                            0
-                              ? 'Free'
-                              : rupee(
-                                  shippingCost
-                                )}
-                          </span>
-
-                        </div>
-
-                        <div className="flex justify-between py-2.5 text-gray-600">
-
-                          <span>
-                            Payment Method
-                          </span>
-
-                          <span className="font-medium text-gray-900">
-                            {
-                              PAYMENT_OPTIONS.find(
-                                (option) =>
-                                  option.id ===
-                                  payMethod
-                              )?.title ||
-                                payMethod
-                            }
-                          </span>
-
-                        </div>
-
-                        <div className="flex justify-between gap-4 py-2.5 text-gray-600">
-
-                          <span>
-                            Deliver To
-                          </span>
-
-                          <span className="text-right font-medium text-gray-900">
-                            {address.fullName},{' '}
-                            {address.city}{' '}
-                            {address.pincode}
-                          </span>
-
-                        </div>
-
-                        {/* FINAL TOTAL */}
-
-                        <div className="flex justify-between pt-4 text-base">
-
-                          <span className="font-bold text-gray-900">
-                            Total
-                          </span>
-
-                          <span className="font-bold text-[#833f25]">
-                            {rupee(total)}
-                          </span>
-
-                        </div>
-
-                      </div>
-                    )}
-
-                  </motion.div>
-
-                </AnimatePresence>
-
-                {/* =================================================
-                    ERROR
-                ================================================== */}
-
-                {formError && (
-                  <p className="mt-4 rounded-lg bg-[#faf8f4] px-3 py-2 text-xs font-medium text-[#4a372a]">
-                    {formError}
-                  </p>
-                )}
-
-                {/* =================================================
-                    NAVIGATION BUTTONS
-                ================================================== */}
-
-                <div className="mt-6 flex justify-end gap-3">
-
-                  {step > 0 && (
-                    <button
-                      type="button"
-                      onClick={previous}
-                      disabled={placing}
-                      className="rounded-full border border-gray-200 px-6 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:border-[#17130f] hover:text-[#17130f] disabled:opacity-50"
-                    >
-                      Back
-                    </button>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={next}
-                    disabled={
-                      placing ||
-                      cart.length === 0
-                    }
-                    className="rounded-full bg-gradient-to-r from-[#e4dccd] to-[#833f25] px-7 py-2.5 text-sm font-semibold text-white shadow-[0_10px_25px_rgba(166,124,27,0.3)] transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
-                  >
-                    {placing
-                      ? 'Processing…'
-                      : step ===
-                        STEPS.length - 1
-                      ? payMethod === 'cod'
-                        ? 'Place Order'
-                        : 'Proceed to Payment'
-                      : 'Continue'}
-                  </button>
-
-                </div>
-
-              </div>
-            </div>
-
-            {/* =====================================================
-                ORDER SUMMARY
-            ====================================================== */}
-
-            <aside className="h-fit rounded-2xl border border-black/5 bg-white p-4 shadow-[0_16px_40px_-28px_rgba(166,124,27,0.3)]">
-
-              <h3 className="mb-3 text-sm font-bold text-gray-900">
-                Order Summary
-              </h3>
-
-              <div className="max-h-48 space-y-2 overflow-y-auto pr-1 text-xs">
-
-                {cart.map((item) => (
-                  <div
-                    className="flex items-center gap-2.5"
-                    key={item.id}
-                  >
-
-                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-[#faf8f4]">
-
-                      {item.image ? (
-                        <img
-                          src={resolveImageUrl(
-                            item.image
-                          )}
-                          alt={item.name}
-                          className="h-full w-full object-cover"
-                          onError={(event) => {
-                            event.currentTarget.style.display =
-                              'none';
-                          }}
-                        />
-                      ) : null}
-
+                  {savedAddresses.length > 0 && (
+                    <div className="co-saved">
+                      <h3 className="co-sub">Saved address{savedAddresses.length > 1 ? 'es' : ''}</h3>
+                      <div className="co-options" role="radiogroup" aria-label="Saved addresses">
+                        {savedAddresses.map((saved) => {
+                          const id = saved.id || saved._id || 'default';
+                          const isSelected = selectedSavedId === id && !showNewForm;
+                          return (
+                            <button key={id} type="button" role="radio" aria-checked={isSelected} className={`opt ${isSelected ? 'is-on' : ''}`} onClick={() => applySavedAddress(saved)}>
+                              <span className="opt-icon"><FiMapPin size={16} aria-hidden="true" /></span>
+                              <span className="opt-text">
+                                <strong>{saved.fullName || user?.name || 'Saved address'}</strong>
+                                <span>{saved.line1 || saved.address1}, {saved.city} {saved.pincode || saved.zip}</span>
+                              </span>
+                              {isSelected && <FiCheck size={16} className="opt-check" aria-hidden="true" />}
+                            </button>
+                          );
+                        })}
+                        <button
+                          type="button" className={`opt opt-new ${showNewForm ? 'is-on' : ''}`}
+                          onClick={() => { setShowNewForm(true); setSelectedSavedId(null); setAddress(emptyAddress); setFormError(''); }}
+                        >
+                          <span className="opt-text"><strong>Use a new address</strong></span>
+                          <FiChevronRight size={16} aria-hidden="true" />
+                        </button>
+                      </div>
                     </div>
+                  )}
 
-                    <span className="flex-1 truncate text-gray-500">
-                      {item.name} × {item.qty}
-                    </span>
-
-                    <span className="shrink-0 font-medium text-gray-800">
-                      {rupee(
-                        item.price *
-                          item.qty
-                      )}
-                    </span>
-
-                  </div>
-                ))}
-
-              </div>
-
-              <div className="mt-3 space-y-1.5 border-t border-black/5 pt-3 text-xs">
-
-                <div className="flex justify-between text-gray-500">
-
-                  <span>
-                    Subtotal
-                  </span>
-
-                  <span>
-                    {rupee(cartSubtotal)}
-                  </span>
-
+                  {showNewForm && (
+                    <div className="form-grid">
+                      <Field id="co-name" label="Full name" required autoComplete="name" value={address.fullName} invalid={req('fullName')} onChange={(v) => updateField('fullName', v)} />
+                      <Field id="co-phone" label="Phone number" required type="tel" inputMode="tel" autoComplete="tel" value={address.phone} invalid={req('phone')} onChange={(v) => updateField('phone', v)} />
+                      <Field id="co-email" label="Email address" type="email" autoComplete="email" className="span-2" value={address.email} onChange={(v) => updateField('email', v)} />
+                      <Field id="co-line1" label="Address" required autoComplete="address-line1" className="span-2" value={address.line1} invalid={req('line1')} onChange={(v) => updateField('line1', v)} />
+                      <Field id="co-city" label="City" required autoComplete="address-level2" value={address.city} invalid={req('city')} onChange={(v) => updateField('city', v)} />
+                      <Field id="co-state" label="State" autoComplete="address-level1" value={address.state} onChange={(v) => updateField('state', v)} />
+                      <Field id="co-pin" label="PIN code" required inputMode="numeric" autoComplete="postal-code" value={address.pincode} invalid={req('pincode')} onChange={(v) => updateField('pincode', v)} />
+                      <Field id="co-country" label="Country" autoComplete="country-name" value={address.country} onChange={(v) => updateField('country', v)} />
+                    </div>
+                  )}
                 </div>
+              )}
 
-                {appliedCoupon && (
-                  <div className="flex justify-between text-[#17130f]">
-
-                    <span>
-                      Coupon (
-                      {appliedCoupon.code}
-                      )
-                    </span>
-
-                    <span>
-                      −
-                      {rupee(
-                        discountAmount
-                      )}
-                    </span>
-
-                  </div>
-                )}
-
-                <div className="flex justify-between text-gray-500">
-
-                  <span>
-                    Shipping
-                  </span>
-
-                  <span>
-                    {shippingCost === 0
-                      ? 'Free'
-                      : rupee(
-                          shippingCost
-                        )}
-                  </span>
-
+              {/* ================= STEP 1: SHIPPING ================= */}
+              {step === 1 && (
+                <div className="co-body co-options" role="radiogroup" aria-label="Shipping method">
+                  <RadioCard
+                    active={shipMethod === 'standard'} onClick={() => setShipMethod('standard')}
+                    title="Standard shipping"
+                    sub={`3–6 business days · ${cartSubtotal > 15000 ? 'Free' : rupee(499)}`}
+                    icon={FiTruck}
+                  />
+                  <RadioCard
+                    active={shipMethod === 'express'} onClick={() => setShipMethod('express')}
+                    title="Express shipping"
+                    sub={`1–2 business days · ${rupee(999)}`}
+                    icon={FiPackage}
+                  />
                 </div>
+              )}
 
-              </div>
+              {/* ================= STEP 2: PAYMENT ================= */}
+              {step === 2 && (
+                <div className="co-body">
+                  <div className="co-options" role="radiogroup" aria-label="Payment method">
+                    {PAYMENT_OPTIONS.map((option) => (
+                      <RadioCard key={option.id} active={payMethod === option.id} onClick={() => setPayMethod(option.id)} title={option.title} sub={option.sub} icon={option.icon} />
+                    ))}
+                  </div>
+                  {payMethod !== 'cod' && (
+                    <p className="co-note">
+                      <FiLock size={16} aria-hidden="true" />
+                      <span>You will be securely redirected to Razorpay Checkout to complete your payment. Card, UPI, Netbanking and other methods shown there depend on your Razorpay account and customer's availability.</span>
+                    </p>
+                  )}
+                  {payMethod === 'cod' && (
+                    <p className="co-note">
+                      <FiPackage size={16} aria-hidden="true" />
+                      <span>Pay in cash when your order is delivered.</span>
+                    </p>
+                  )}
+                </div>
+              )}
 
-              <div className="mt-3 flex items-center justify-between border-t border-black/5 pt-3">
+              {/* ================= STEP 3: REVIEW ================= */}
+              {step === 3 && (
+                <div className="co-body">
+                  <ul className="rev-items">
+                    {cart.map((item) => (
+                      <li key={item.id}>
+                        <span>{item.name} × {item.qty}</span>
+                        <span className="price">{rupee(item.price * item.qty)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <dl className="rev-rows price">
+                    <div><dt>Subtotal</dt><dd>{rupee(cartSubtotal)}</dd></div>
+                    {appliedCoupon && <div className="is-save"><dt>Coupon ({appliedCoupon.code})</dt><dd>−{rupee(discountAmount)}</dd></div>}
+                    <div><dt>Shipping ({ship})</dt><dd>{shippingCost === 0 ? 'Free' : rupee(shippingCost)}</dd></div>
+                    <div><dt>Payment method</dt><dd>{PAYMENT_OPTIONS.find((option) => option.id === payMethod)?.title || payMethod}</dd></div>
+                    <div><dt>Deliver to</dt><dd>{address.fullName}, {address.city} {address.pincode}</dd></div>
+                    <div className="rev-total"><dt>Total</dt><dd>{rupee(total)}</dd></div>
+                  </dl>
+                </div>
+              )}
+            </section>
 
-                <span className="text-sm font-bold text-gray-900">
-                  Total
-                </span>
+            {formError && <p className="form-alert form-alert-error co-error" role="alert">{formError}</p>}
 
-                <span className="text-base font-bold text-gray-900">
-                  {rupee(total)}
-                </span>
-
-              </div>
-
-            </aside>
-
+            <div className="co-nav">
+              {step > 0 ? <Button variant="outline" onClick={previous} disabled={placing}>Back</Button> : <span />}
+              <Button size="lg" onClick={next} loading={placing} disabled={placing || cart.length === 0}>
+                {placing ? 'Processing…' : step === STEPS.length - 1 ? (payMethod === 'cod' ? 'Place order' : 'Proceed to payment') : step === 1 ? 'Continue to Payment' : 'Continue'}
+              </Button>
+            </div>
           </div>
+
+          {/* ================= ORDER SUMMARY ================= */}
+          <aside className="summary co-summary" aria-label="Order summary">
+            <h2>Order summary</h2>
+            <ul className="co-lines">
+              {cart.map((item) => (
+                <li key={item.id}>
+                  <span className="co-thumb">
+                    {item.image ? <img src={resolveImageUrl(item.image)} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : null}
+                    <span className="co-qty num">{item.qty}</span>
+                  </span>
+                  <span className="co-line-name">{item.name}</span>
+                  <span className="price co-line-price">{rupee(item.price * item.qty)}</span>
+                </li>
+              ))}
+            </ul>
+            <dl className="sum-rows price">
+              <div><dt>Subtotal</dt><dd>{rupee(cartSubtotal)}</dd></div>
+              {appliedCoupon && <div className="is-save"><dt>Coupon ({appliedCoupon.code})</dt><dd>−{rupee(discountAmount)}</dd></div>}
+              <div><dt>Shipping</dt><dd>{shippingCost === 0 ? 'Free' : rupee(shippingCost)}</dd></div>
+            </dl>
+            <div className="sum-total price"><span>Total</span><strong>{rupee(total)}</strong></div>
+            <p className="co-secure"><FiLock size={14} aria-hidden="true" /> Secure checkout</p>
+          </aside>
         </div>
       </div>
     </>
   );
 }
 
-/*
- * ============================================================
- * FIELD COMPONENT
- * ============================================================
- */
-
-function Field({
-  placeholder,
-  value,
-  onChange,
-  className = '',
-}) {
+/* ---------- form field with visible label ---------- */
+function Field({ id, label, value, onChange, className = '', required = false, invalid = false, type = 'text', inputMode, autoComplete }) {
   return (
-    <input
-      type="text"
-      placeholder={placeholder}
-      value={value}
-      onChange={(event) =>
-        onChange(event.target.value)
-      }
-      className={`
-        rounded-xl
-        border border-gray-200
-        bg-[#faf8f4]
-        px-4 py-2.5
-        text-sm text-gray-800
-        placeholder:text-gray-400
-        transition-colors
-        focus:border-[#17130f]
-        focus:bg-white
-        focus:outline-none
-        ${className}
-      `}
-    />
+    <div className={`field ${className}`}>
+      <label className="field-label" htmlFor={id}>{label}{required && <span aria-hidden="true"> *</span>}</label>
+      <input
+        id={id} type={type} inputMode={inputMode} autoComplete={autoComplete} className="input"
+        value={value} required={required} aria-invalid={invalid || undefined} aria-describedby={invalid ? `${id}-err` : undefined}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {invalid && <span id={`${id}-err`} className="field-error">This field is required.</span>}
+    </div>
   );
 }
 
-/*
- * ============================================================
- * RADIO CARD COMPONENT
- * ============================================================
- */
-
-function RadioCard({
-  active,
-  onClick,
-  title,
-  sub,
-  icon: Icon,
-}) {
+/* ---------- selectable option card ---------- */
+function RadioCard({ active, onClick, title, sub, icon: Icon }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`
-        flex w-full
-        items-center gap-3
-        rounded-xl
-        border p-3.5
-        text-left
-        transition-all
-        ${
-          active
-            ? 'border-[#17130f] bg-[#faf8f4] shadow-[0_4px_14px_rgba(166,124,27,0.15)]'
-            : 'border-gray-200 hover:border-[#e4dccd]'
-        }
-      `}
-    >
-
-      {/* ICON */}
-
-      <span
-        className={`
-          flex h-9 w-9
-          shrink-0
-          items-center
-          justify-center
-          rounded-full
-          ${
-            active
-              ? 'bg-gradient-to-br from-[#e4dccd] to-[#17130f] text-white'
-              : 'bg-gray-100 text-gray-400'
-          }
-        `}
-      >
-        <Icon size={15} />
-      </span>
-
-      {/* CONTENT */}
-
-      <span className="flex-1">
-
-        <span className="block text-sm font-semibold text-gray-900">
-          {title}
-        </span>
-
-        <span className="block text-xs text-gray-500">
-          {sub}
-        </span>
-
-      </span>
-
-      {/* CHECK */}
-
-      {active && (
-        <FiCheck
-          className="shrink-0 text-[#17130f]"
-          size={18}
-        />
-      )}
-
+    <button type="button" role="radio" aria-checked={active} onClick={onClick} className={`opt ${active ? 'is-on' : ''}`}>
+      <span className="opt-icon"><Icon size={17} aria-hidden="true" /></span>
+      <span className="opt-text"><strong>{title}</strong><span>{sub}</span></span>
+      {active && <FiCheck size={16} className="opt-check" aria-hidden="true" />}
     </button>
   );
 }

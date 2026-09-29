@@ -12,14 +12,15 @@ export default function Toast() {
       {toast && (
         <motion.div
           key={message}
-          className={`toast glass toast-${type}`}
-          initial={{ opacity: 0, y: 16, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 10, scale: 0.96 }}
-          transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+          className={`toast toast-${type}`}
+          role={type === 'error' ? 'alert' : 'status'}
+          initial={{ opacity: 0, y: 16, x: '-50%' }}
+          animate={{ opacity: 1, y: 0, x: '-50%' }}
+          exit={{ opacity: 0, y: 10, x: '-50%' }}
+          transition={{ duration: 0.25, ease: [0.22, 0.61, 0.36, 1] }}
         >
-          {type === 'error' ? <FiAlertCircle /> : <FiCheckCircle />}
-          {message}
+          {type === 'error' ? <FiAlertCircle size={18} /> : <FiCheckCircle size={18} />}
+          <span>{message}</span>
         </motion.div>
       )}
     </AnimatePresence>

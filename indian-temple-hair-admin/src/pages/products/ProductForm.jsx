@@ -36,6 +36,7 @@ const empty = {
   hairColour: "",
   hairDensity: "",
   hairOrigin: "",
+  laceType: "",
   weight: "",
   price: "",
   discountPrice: "",
@@ -309,6 +310,7 @@ export default function ProductForm() {
         texture: "",
         weight: "",
         density: "",
+        laceType: "",
         sku: "",
         price: "",
         stock: 0,
@@ -609,6 +611,7 @@ export default function ProductForm() {
                 ["hairColour", "Hair Colour", "hairColour"],
                 ["hairDensity", "Hair Density", "hairDensity"],
                 ["hairOrigin", "Hair Origin", "hairOrigin"],
+                ["laceType", "Lace Type", "laceType"],
               ].map(([key, label, attrType]) => (
                 <FormField key={key} label={label}>
                   <Select
@@ -707,6 +710,7 @@ export default function ProductForm() {
                           "Texture",
                           "Weight",
                           "Density",
+                          "Lace Type",
                           "SKU",
                           "Price",
                           "Stock",
@@ -727,6 +731,7 @@ export default function ProductForm() {
                             "texture",
                             "weight",
                             "density",
+                            "laceType",
                           ].map((k) => (
                             <td key={k} className="px-1 py-1.5">
                               <Input
@@ -785,7 +790,7 @@ export default function ProductForm() {
                       {values.variants.length === 0 && (
                         <tr>
                           <td
-                            colSpan={9}
+                            colSpan={10}
                             className="text-center py-6 text-ink-faint text-xs"
                           >
                             No variants added yet.

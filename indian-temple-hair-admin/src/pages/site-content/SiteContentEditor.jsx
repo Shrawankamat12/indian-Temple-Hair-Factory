@@ -17,6 +17,7 @@ const TABS = [
   { value: 'faq', label: 'FAQ / Newsletter Teasers' },
   { value: 'footer', label: 'Footer' },
   { value: 'header', label: 'Header' },
+  { value: 'policies', label: 'Policy Pages' },
 ];
 
 // Deep-merge fetched data over sensible empty shapes so every nested field is controlled input-safe
@@ -34,16 +35,23 @@ const empty = {
   faqTeaser: { eyebrow: '', title: '', description: '', ctaText: '' },
   newsletterSection: { eyebrow: '', title: '', description: '' },
   homeSections: [],
-  footer: { brandDescription: '', address: '', phone: '', email: '', socialLinks: { instagram: '', facebook: '', whatsapp: '', youtube: '', twitter: '' }, columns: [], trustBadges: [], bottomText: '' },
+  footer: { brandDescription: '', address: '', phone: '', email: '', socialLinks: { instagram: '', facebook: '', whatsapp: '', youtube: '', twitter: '' }, columns: [], trustBadges: [], bottomText: '', paymentMethods: [] },
   header: { announcementEnabled: false, announcementText: '', announcementLink: '' },
+  announcements: [],
+  policies: [],
 };
 
 const HOME_SECTION_LABELS = {
   categories: 'Categories', featuredCategories: 'Featured Categories', bestSellers: 'Best Sellers',
   flashSale: 'Flash Sale', newArrivals: 'New Arrivals', trending: 'Trending Products',
   premium: 'Premium Products', featuredProducts: 'Featured Products', collections: 'Collections',
-  testimonials: 'Testimonials',
+  testimonials: 'Customer Reviews',
+  textures: 'Shop by Texture', midBanner: 'Wide Mid Banner', offerCards: 'Promo Cards (New Arrivals / Offers)',
+  seasonalOffers: 'Seasonal Offers', specialOffers: 'Special Offers', beforeAfter: 'Before & After + Try-On',
+  careGuide: 'Hair Care Guide', instagram: 'Follow us on Instagram',
 };
+
+const NEW_HOME_SECTIONS = ['textures', 'midBanner', 'offerCards', 'seasonalOffers', 'specialOffers', 'beforeAfter', 'careGuide', 'instagram'];
 
 export default function SiteContentEditor() {
   const [tab, setTab] = useState('hero');
@@ -54,7 +62,13 @@ export default function SiteContentEditor() {
 
   useEffect(() => {
     getSiteContent()
-      .then((data) => setValues((prev) => deepMerge(prev, data)))
+      .then((data) => setValues((prev) => {
+        const merged = deepMerge(prev, data);
+        // existing sites saved before the redesign don't list the new Home sections yet — add them so they can be toggled/reordered
+        const have = new Set(merged.homeSections.map((x) => x.key));
+        const extra = NEW_HOME_SECTIONS.filter((k) => !have.has(k)).map((key, i) => ({ key, enabled: true, order: merged.homeSections.length + i }));
+        return { ...merged, homeSections: [...merged.homeSections, ...extra] };
+      }))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -311,6 +325,9 @@ export default function SiteContentEditor() {
                   ))}
                 </div>
               </div>
+              <FormField label="Payment Methods (footer icons)" hint="e.g. Visa, Mastercard, UPI, RuPay, COD. Icons are picked by name.">
+                <TagInput value={values.footer.paymentMethods} onChange={(v) => set('footer.paymentMethods', v)} placeholder="e.g. UPI" />
+              </FormField>
               <FormField label="Trust Badges (footer strip)">
                 <TagInput value={values.footer.trustBadges} onChange={(v) => set('footer.trustBadges', v)} />
               </FormField>
@@ -326,6 +343,18 @@ export default function SiteContentEditor() {
               <Switch checked={values.header.announcementEnabled} onChange={(v) => set('header.announcementEnabled', v)} label="Show announcement bar above the header" />
               <FormField label="Announcement Text"><Input value={values.header.announcementText} onChange={(e) => set('header.announcementText', e.target.value)} placeholder="Free shipping on orders over ₹15,000" /></FormField>
               <FormField label="Announcement Link (optional)"><Input value={values.header.announcementLink} onChange={(e) => set('header.announcementLink', e.target.value)} placeholder="/shop" /></FormField>
+              <FormField label="Announcement Bar Messages" hint="Press Enter to add. Up to 3 are shown side by side on desktop and rotate on mobile.">
+                <TagInput value={values.announcements} onChange={(v) => set('announcements', v)} placeholder="e.g. Free shipping on orders above ₹15,000" />
+              </FormField>
+            </div>
+          )}
+
+          {tab === 'policies' && (
+            <div className="max-w-3xl flex flex-col gap-4">
+              <p className="text-[12.5px] text-ink-muted">
+                Each policy page is shown at <code>/policy/&lt;slug&gt;</code>. Use the slugs <b>shipping</b>, <b>returns</b>, <b>cancellation</b>, <b>privacy</b>, <b>terms</b>. If a slug is missing here the storefront falls back to its built-in text.
+              </p>
+              <PoliciesEditor policies={values.policies} onChange={(v) => set('policies', v)} />
             </div>
           )}
 
@@ -349,6 +378,47 @@ function Repeater({ items = [], onChange, newItem, render }) {
         </div>
       ))}
       <Button type="button" variant="secondary" size="sm" onClick={add} className="self-start">+ Add</Button>
+    </div>
+  );
+}
+
+/** Policy pages: slug + title, each with a nested list of sections (heading + body). */
+function PoliciesEditor({ policies = [], onChange }) {
+  const updatePolicy = (i, patch) => { const next = [...policies]; next[i] = { ...next[i], ...patch }; onChange(next); };
+  const removePolicy = (i) => onChange(policies.filter((_, idx) => idx !== i));
+  const addPolicy = () => onChange([...policies, { slug: '', title: '', sections: [{ heading: '', body: '' }] }]);
+  const updateSection = (pi, si, patch) => {
+    const sections = [...(policies[pi].sections || [])];
+    sections[si] = { ...sections[si], ...patch };
+    updatePolicy(pi, { sections });
+  };
+  const removeSection = (pi, si) => updatePolicy(pi, { sections: (policies[pi].sections || []).filter((_, i) => i !== si) });
+  const addSection = (pi) => updatePolicy(pi, { sections: [...(policies[pi].sections || []), { heading: '', body: '' }] });
+
+  return (
+    <div className="flex flex-col gap-4">
+      {policies.map((p, pi) => (
+        <div key={pi} className="p-3 rounded-md border border-border-soft bg-surface-muted flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Slug"><Input value={p.slug || ''} onChange={(e) => updatePolicy(pi, { slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} placeholder="shipping" /></FormField>
+            <FormField label="Title"><Input value={p.title || ''} onChange={(e) => updatePolicy(pi, { title: e.target.value })} placeholder="Shipping Policy" /></FormField>
+          </div>
+          <div className="flex flex-col gap-3 pl-2">
+            {(p.sections || []).map((sec, si) => (
+              <div key={si} className="flex flex-col gap-2 border-l-2 border-border-soft pl-3">
+                <div className="flex items-center gap-2">
+                  <Input value={sec.heading || ''} onChange={(e) => updateSection(pi, si, { heading: e.target.value })} placeholder={`Section ${si + 1} heading`} />
+                  <button type="button" onClick={() => removeSection(pi, si)} className="text-danger text-xs font-semibold shrink-0">Remove</button>
+                </div>
+                <Textarea rows={3} value={sec.body || ''} onChange={(e) => updateSection(pi, si, { body: e.target.value })} placeholder="Section text" />
+              </div>
+            ))}
+            <Button type="button" variant="subtle" size="sm" onClick={() => addSection(pi)} className="self-start">+ Add Section</Button>
+          </div>
+          <button type="button" onClick={() => removePolicy(pi)} className="text-danger text-xs font-semibold self-end">Remove Policy</button>
+        </div>
+      ))}
+      <Button type="button" variant="secondary" size="sm" onClick={addPolicy} className="self-start">+ Add Policy Page</Button>
     </div>
   );
 }

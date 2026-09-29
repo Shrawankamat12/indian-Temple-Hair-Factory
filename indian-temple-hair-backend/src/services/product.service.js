@@ -2,19 +2,79 @@ const slugify = require('slugify');
 const BaseService = require('./base.service');
 const AppError = require('../utils/AppError');
 const { productRepository } = require('../repositories');
+const ApiFeatures = require('../utils/apiFeatures');
+const Category = require('../models/Category');
 
 class ProductService extends BaseService {
   constructor() {
     super(productRepository, 'Product');
   }
 
-  async listPublic(queryString) {
-    // visibility is additive: products created before this field existed have no value
-    // set, so `$ne: 'hidden'` keeps them visible while still honouring an explicit "hidden".
-    return this.repository.list({ isActive: true, visibility: { $ne: 'hidden' } }, queryString, {
-      populate: { path: 'category', select: 'name slug' },
-      searchFields: ['name', 'sku', 'tags'],
-    });
+  /**
+   * Public shop listing. Supports (all optional, all additive to the generic ApiFeatures filters):
+   *   category=<slug|id>  texture|hairTexture  hairType  length  color|hairColour  laceType  hairDensity|density
+   *   (each accepts a comma list: texture=Straight,Body%20Wave)
+   *   price[gte]/price[lte]  rating[gte]  search  page  limit
+   *   sort=price-asc|price-desc|newest|popularity|rating (or any raw mongoose sort string, e.g. -price)
+   * `total` is the count of products matching the applied filters (not the whole catalogue).
+   */
+  async listPublic(queryString = {}) {
+    const q = { ...queryString };
+    const and = [];
+    const esc = (v) => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const list = (v) => String(v).split(',').map((x) => x.trim()).filter(Boolean);
+    const ci = (values) => values.map((v) => new RegExp(`^${esc(v)}$`, 'i'));
+    const take = (...keys) => { let v; keys.forEach((k) => { if (q[k] !== undefined && q[k] !== '') v = v ?? q[k]; delete q[k]; }); return v; };
+
+    // category: slug(s) or ObjectId(s)
+    const category = take('category');
+    if (category) {
+      const parts = list(category);
+      const ids = parts.filter((p) => /^[0-9a-fA-F]{24}$/.test(p));
+      const slugs = parts.filter((p) => !/^[0-9a-fA-F]{24}$/.test(p)).map((p) => p.toLowerCase());
+      const found = slugs.length ? await Category.find({ slug: { $in: slugs } }).select('_id') : [];
+      and.push({ category: { $in: [...ids, ...found.map((c) => c._id)] } });
+    }
+
+    // text-ish attributes stored both on the product and inside variants
+    const attr = (paramKeys, productFields, variantField) => {
+      const v = take(...paramKeys);
+      if (!v) return;
+      const re = ci(list(v));
+      and.push({ $or: [...productFields.map((f) => ({ [f]: { $in: re } })), ...(variantField ? [{ [variantField]: { $in: re } }] : [])] });
+    };
+    attr(['texture', 'hairTexture'], ['texture', 'hairTexture'], 'variants.texture');
+    attr(['color', 'hairColour'], ['color', 'hairColour'], 'variants.colour');
+    attr(['laceType'], ['laceType'], 'variants.laceType');
+    attr(['hairDensity', 'density'], ['hairDensity'], 'variants.density');
+    attr(['hairType'], ['hairType'], null);
+
+    // length (inches). Product.length is a Number, variants.length is a String.
+    const length = take('length');
+    if (length && typeof length !== 'object') {
+      const nums = list(length).map(Number).filter((n) => !Number.isNaN(n));
+      if (nums.length) and.push({ $or: [{ length: { $in: nums } }, { 'variants.length': { $in: nums.map(String) } }] });
+    } else if (length && typeof length === 'object') {
+      q.length = length; // length[gte]/length[lte] handled by the generic filter
+    }
+
+    const sortMap = {
+      'price-asc': 'price', 'price-desc': '-price', newest: '-createdAt',
+      popularity: '-reviewsCount -rating', rating: '-rating -reviewsCount', featured: '-featured -createdAt',
+    };
+    if (q.sort && sortMap[q.sort]) q.sort = sortMap[q.sort];
+
+    const base = { isActive: true, visibility: { $ne: 'hidden' }, ...(and.length && { $and: and }) };
+    const features = new ApiFeatures(
+      this.repository.model.find(base).populate({ path: 'category', select: 'name slug' }),
+      q
+    ).filter().search(['name', 'sku', 'tags']).sort().paginate();
+
+    const total = await this.repository.model.countDocuments(features.query.getFilter());
+    const data = await features.query;
+    const page = parseInt(q.page, 10) || 1;
+    const limit = parseInt(q.limit, 10) || 20;
+    return { data, total, page, pages: Math.max(1, Math.ceil(total / limit)) };
   }
 
   /** Admin panel sees every product (active + inactive), unpaginated by default so the

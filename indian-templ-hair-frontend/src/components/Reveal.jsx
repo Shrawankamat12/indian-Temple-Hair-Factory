@@ -1,28 +1,34 @@
-import { motion } from 'framer-motion';
-
-const variants = {
-  hidden: { opacity: 0, y: 28 },
-  visible: { opacity: 1, y: 0 },
-};
+import { useEffect, useRef, useState } from 'react';
 
 /**
- * Scroll-triggered reveal wrapper, now powered by Framer Motion.
- * Same public API as before (`as`, `delay`, `className`, children) so every
- * page that already renders <Reveal as="section" ...> keeps working as-is.
+ * Light scroll reveal (fade + 14px rise). Same public API as before
+ * (`as`, `delay`, `className`, children) so existing usages keep working.
+ * Falls back to visible when IntersectionObserver is unavailable; the CSS
+ * disables the motion entirely under prefers-reduced-motion.
  */
-export default function Reveal({ children, delay = 0, className = '', as = 'div', ...rest }) {
-  const MotionTag = motion[as] || motion.div;
+export default function Reveal({ children, delay = 0, className = '', as: Tag = 'div', style, ...rest }) {
+  const ref = useRef(null);
+  const [seen, setSeen] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    if (!('IntersectionObserver' in window)) { setSeen(true); return undefined; }
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setSeen(true); io.disconnect(); }
+    }, { threshold: 0.06, rootMargin: '0px 0px -40px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <MotionTag
-      className={className}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.14 }}
-      variants={variants}
-      transition={{ duration: 0.7, delay: delay / 1000, ease: [0.16, 1, 0.3, 1] }}
+    <Tag
+      ref={ref}
+      className={`reveal ${seen ? 'in' : ''} ${className}`}
+      style={{ ...(delay ? { transitionDelay: `${delay}ms` } : null), ...style }}
       {...rest}
     >
       {children}
-    </MotionTag>
+    </Tag>
   );
 }

@@ -87,6 +87,28 @@ class ShippingService {
     return { awbCode: data.response?.data?.awb_code, courierName: data.response?.data?.courier_name };
   }
 
+  /**
+   * Live courier serviceability for a delivery pincode (Shiprocket). Returns
+   * { serviceable, minDays, maxDays, cod } or throws if Shiprocket is not configured / unreachable.
+   */
+  async checkServiceability(pincode) {
+    const pickup = process.env.SHIPROCKET_PICKUP_PINCODE || '110015';
+    const data = await this._request(
+      `/courier/serviceability/?pickup_postcode=${pickup}&delivery_postcode=${pincode}&cod=0&weight=0.5`
+    );
+    const couriers = data?.data?.available_courier_companies || [];
+    if (!couriers.length) return { serviceable: false };
+    const days = couriers
+      .map((c) => Number(c.estimated_delivery_days))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    return {
+      serviceable: true,
+      minDays: days.length ? Math.min(...days) : null,
+      maxDays: days.length ? Math.max(...days) : null,
+      cod: couriers.some((c) => Number(c.cod) === 1),
+    };
+  }
+
   async track(awbCode) {
     return this._request(`/courier/track/awb/${awbCode}`);
   }

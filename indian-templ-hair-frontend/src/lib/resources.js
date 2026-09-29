@@ -197,6 +197,11 @@ export const wholesaleApi = {
     api.post('/wholesale', payload),
 };
 
+export const shippingApi = {
+  // Delivery estimate for a pincode. `estimated: true` means it is NOT live courier data.
+  check: (pincode) => api.get('/shipping/check', { pincode }),
+};
+
 export const newsletterApi = {
   subscribe: (email) =>
     api.post('/newsletter/subscribe', { email }),

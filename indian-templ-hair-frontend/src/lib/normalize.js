@@ -19,6 +19,7 @@ export function normalizeVariant(v) {
     hairType: v.hairType || v.texture, // fall back to texture if hairType isn't sent
     weight: v.weight,
     density: v.density,
+    laceType: v.laceType,
     price: v.price ?? v.unitPrice ?? v.sellingPrice ?? v.finalPrice,
     mrp: v.mrp ?? v.unitPrice,
     discount: v.discount ?? 0,
@@ -42,6 +43,9 @@ export function normalizeProduct(p) {
     texture: p.texture,
     hairType: p.hairType || p.texture, // fall back to texture if hairType isn't sent
     length: p.length,
+    laceType: p.laceType || '',
+    hairDensity: p.hairDensity || '',
+    hairTexture: p.hairTexture || '',
     color: p.color || p.colour, // API sometimes sends British spelling "colour"
     rating: p.rating || 0,
     reviews: p.reviewsCount || 0,
@@ -91,6 +95,12 @@ export function normalizeCategory(c) {
     image: c.image,
     img: c.image, // kept for any older code still reading `img`
     featured: !!c.featured,
+    banner: c.banner || '',
+    description: c.description || '',
+    showInMegaMenu: c.showInMegaMenu !== false,
+    active: c.status !== false,
+    parentId: c.parentId || null,
+    order: c.sortOrder || c.order || 0,
   };
 }
 
@@ -111,7 +121,7 @@ export function normalizeCollection(c) {
 
 export function normalizeAttribute(a) {
   if (!a) return a;
-  return { id: a._id, _id: a._id, type: a.type, name: a.name, value: a.value, colorSwatch: a.colorSwatch };
+  return { id: a._id, _id: a._id, type: a.type, name: a.name, value: a.value, colorSwatch: a.colorSwatch, image: a.image, status: a.status !== false, sortOrder: a.sortOrder || 0 };
 }
 
 // SiteContent's schema field names already match what Home.jsx/Footer.jsx consume directly —

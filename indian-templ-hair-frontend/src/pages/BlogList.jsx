@@ -1,13 +1,27 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
-import PhotoBlock from '../components/PhotoBlock';
-import Reveal from '../components/Reveal';
 import { ProductGridSkeleton } from '../components/Skeletons';
 import { ErrorState, EmptyState } from '../components/StateBlocks';
 import { useBlogs } from '../hooks/useStoreData';
+import { resolveImageUrl } from '../lib/api';
 
 const cats = ['All', 'Hair Care', 'Education', 'Wholesale', 'Company'];
+
+export function BlogCard({ post }) {
+  const img = resolveImageUrl(post.img);
+  return (
+    <Link to={`/journal/${post.id}`} className="bcard">
+      <span className="bcard-media">{img && <img src={img} alt="" loading="lazy" />}</span>
+      <span className="bcard-body">
+        <span className="bcard-meta">{[post.cat, post.date].filter(Boolean).join(', ')}</span>
+        <h3>{post.title}</h3>
+        {post.excerpt && <p>{post.excerpt}</p>}
+        <span className="link-u bcard-more">Read article</span>
+      </span>
+    </Link>
+  );
+}
 
 export default function BlogList() {
   const [cat, setCat] = useState('All');
@@ -16,11 +30,11 @@ export default function BlogList() {
   return (
     <>
       <PageHeader crumbs={[{ label: 'Journal' }]} title="The Journal" lede="Hair care guides, wholesale advice and stories from our Delhi factory floor." />
-      <div className="section">
+      <div className="section section--tight">
         <div className="container">
-          <div className="facc-chip-row" style={{ marginBottom: 32 }}>
+          <div className="chip-row blog-filter" role="group" aria-label="Filter articles">
             {cats.map((c) => (
-              <button key={c} className={`facc-chip ${cat === c ? 'active' : ''}`} onClick={() => setCat(c)}>{c}</button>
+              <button key={c} type="button" className="chip" aria-pressed={cat === c} onClick={() => setCat(c)}>{c}</button>
             ))}
           </div>
 
@@ -31,17 +45,8 @@ export default function BlogList() {
           ) : blogs.length === 0 ? (
             <EmptyState title="No posts in this category yet." />
           ) : (
-            <div className="blog-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
-              {blogs.map((b) => (
-                <Reveal key={b.id} as={Link} className="blog-card card" to={`/journal/${b.id}`}>
-                  <PhotoBlock tone="beige" ratio="16/10" rounded={0} label={b.cat} src={b.img} alt={b.title} />
-                  <div className="blog-card-body">
-                    <span className="eyebrow">{b.date}</span>
-                    <h4>{b.title}</h4>
-                    <p style={{ fontSize: '0.85rem', color: 'rgba(23,19,15,0.6)', marginTop: 8 }}>{b.excerpt}</p>
-                  </div>
-                </Reveal>
-              ))}
+            <div className="bgrid">
+              {blogs.map((b) => <BlogCard key={b.id} post={b} />)}
             </div>
           )}
         </div>

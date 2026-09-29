@@ -124,7 +124,7 @@ export default function ProductDetails() {
 
           <Card title="Attributes">
             <div className="grid grid-cols-2 gap-2 text-[12.5px]">
-              {['hairType', 'hairTexture', 'hairLength', 'hairColour', 'hairDensity', 'hairOrigin', 'weight'].map((k) => (
+              {['hairType', 'hairTexture', 'hairLength', 'hairColour', 'hairDensity', 'hairOrigin', 'laceType', 'weight'].map((k) => (
                 product[k] ? <Badge key={k} tone="neutral">{product[k]}</Badge> : null
               ))}
             </div>
