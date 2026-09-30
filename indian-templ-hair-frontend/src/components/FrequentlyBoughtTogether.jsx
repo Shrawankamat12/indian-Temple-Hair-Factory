@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
 import PhotoBlock from './PhotoBlock';
+import Button from './Button';
+import { Check } from './Field';
 import { rupee } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
 import { useStore } from '../context/StoreContext';
+import { cardCls } from '../lib/ui';
 
 export default function FrequentlyBoughtTogether({ product, pool }) {
   const { addToCart } = useStore();
@@ -29,35 +32,34 @@ export default function FrequentlyBoughtTogether({ product, pool }) {
   const total = selected.reduce((n, p) => n + p.price, 0);
 
   return (
-    <div className="card card-pad fbt">
-      <h3 className="fbt-title">Frequently bought together</h3>
-      <div className="fbt-row">
+    <div className={`${cardCls} p-5 sm:p-7`}>
+      <h3 className="mb-5 text-[1.4rem]">Frequently bought together</h3>
+      <div className="flex flex-wrap items-center gap-2">
         {all.map((p, i) => (
-          <div key={p.id} className="fbt-cell">
-            <div className="fbt-card">
-              <PhotoBlock tone={p.tone} ratio="4/5" src={resolveImageUrl(p.image)} alt={p.name} />
-              <p>{p.name}</p>
-              <span className="price-now">{rupee(p.price)}</span>
+          <div key={p.id} className="flex items-center gap-2">
+            <div className="w-[120px] sm:w-[150px]">
+              <PhotoBlock tone={p.tone} ratio="4/5" rounded={8} src={resolveImageUrl(p.image)} alt={p.name} />
+              <p className="mb-0.5 mt-2 line-clamp-2 text-[0.8rem] leading-[1.35] text-ink">{p.name}</p>
+              <span className="font-sans text-[0.95rem] font-bold tabular-nums text-espresso">{rupee(p.price)}</span>
             </div>
-            {i < all.length - 1 && <span className="fbt-plus" aria-hidden="true">+</span>}
+            {i < all.length - 1 && <span className="px-1.5 font-display text-[1.6rem] text-walnut" aria-hidden="true">+</span>}
           </div>
         ))}
       </div>
 
-      <div className="fbt-checklist">
+      <div className="my-[22px] grid gap-2.5 border-y border-line py-[18px]">
         {all.map((p) => (
-          <label key={p.id} className="check">
-            <input type="checkbox" checked={checked.has(p.id)} onChange={() => toggle(p.id)} />
-            <span>{p.name}, <strong className="price">{rupee(p.price)}</strong></span>
-          </label>
+          <Check key={p.id} checked={checked.has(p.id)} onChange={() => toggle(p.id)}>
+            {p.name}, <strong className="tabular-nums">{rupee(p.price)}</strong>
+          </Check>
         ))}
       </div>
 
-      <div className="fbt-total">
-        <span>Total for {selected.length} item{selected.length !== 1 ? 's' : ''}: <strong className="price-now">{rupee(total)}</strong></span>
-        <button type="button" className="btn btn-primary btn-sm" disabled={selected.length === 0} onClick={() => selected.forEach((p) => addToCart(p, 1))}>
+      <div className="flex flex-wrap items-center justify-between gap-3.5">
+        <span>Total for {selected.length} item{selected.length !== 1 ? 's' : ''}: <strong className="font-sans text-lg font-bold tabular-nums text-espresso">{rupee(total)}</strong></span>
+        <Button size="sm" disabled={selected.length === 0} onClick={() => selected.forEach((p) => addToCart(p, 1))}>
           Add {selected.length} to cart
-        </button>
+        </Button>
       </div>
     </div>
   );

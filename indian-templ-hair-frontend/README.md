@@ -14,3 +14,17 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the Oxlint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+
+## Styling (Tailwind CSS v4)
+
+The whole UI is styled with Tailwind utility classes. There are no per-page CSS files.
+
+- `src/index.css` is the only stylesheet: `@import "tailwindcss"`, design tokens in `@theme`
+  (colours, fonts, shadows, animations) and a few base rules.
+- `src/lib/ui.js` holds shared class recipes (buttons, inputs, chips, cards).
+- Reusable primitives: `Button`, `Container`, `Section`, `Field` (Input/Textarea/Select/Check),
+  `Badge`, `Overlay`, `PageTitle`, `SummaryCard`, `StatusPill`, `QtyStepper`.
+- Brand colours are utilities: `bg-espresso`, `text-champagne`, `border-line`, `bg-brand`, etc.
+- Custom breakpoint `nav:` (70rem) switches the header between mobile and desktop.
+
+New route: `/account/orders/:id` (order detail, uses the existing `ordersApi.get`).

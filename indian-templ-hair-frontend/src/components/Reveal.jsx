@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { cx } from '../lib/ui';
 
 /**
- * Light scroll reveal (fade + 14px rise). Same public API as before
- * (`as`, `delay`, `className`, children) so existing usages keep working.
- * Falls back to visible when IntersectionObserver is unavailable; the CSS
- * disables the motion entirely under prefers-reduced-motion.
+ * Light scroll reveal (fade + rise). Falls back to visible when IntersectionObserver
+ * is unavailable and is disabled under prefers-reduced-motion.
  */
 export default function Reveal({ children, delay = 0, className = '', as: Tag = 'div', style, ...rest }) {
   const ref = useRef(null);
@@ -24,7 +23,11 @@ export default function Reveal({ children, delay = 0, className = '', as: Tag = 
   return (
     <Tag
       ref={ref}
-      className={`reveal ${seen ? 'in' : ''} ${className}`}
+      className={cx(
+        'transition duration-[600ms] ease-soft motion-reduce:translate-y-0 motion-reduce:opacity-100',
+        seen ? 'translate-y-0 opacity-100' : 'translate-y-3.5 opacity-0',
+        className,
+      )}
       style={{ ...(delay ? { transitionDelay: `${delay}ms` } : null), ...style }}
       {...rest}
     >

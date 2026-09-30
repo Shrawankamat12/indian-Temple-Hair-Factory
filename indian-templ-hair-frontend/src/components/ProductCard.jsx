@@ -1,108 +1,122 @@
 import { Link } from 'react-router-dom';
-import { FiHeart, FiEye, FiColumns } from 'react-icons/fi';
+import { FiHeart, FiEye, FiColumns, FiShoppingBag, FiImage } from 'react-icons/fi';
 import StarRating from './StarRating';
+import Button from './Button';
+import Badge from './Badge';
 import { rupee } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
 import { useStore } from '../context/StoreContext';
 import { useCompare } from '../context/CompareContext';
+import { cx } from '../lib/ui';
 
-// Bundled fallback photos keep product cards visual even when the admin/API
-// product has no image yet. Real API images always take priority.
-import pStraight from '../assets/photos/p-kirti-straight.jpg';
-import pBody from '../assets/photos/p-delhi-bodywave.jpg';
-import pWavy from '../assets/photos/p-tara-wavywig.jpg';
-import pTemple from '../assets/photos/p-temple-wavy.jpg';
-import pCurly from '../assets/photos/p-nisha-curlywig.jpg';
-import pKinky from '../assets/photos/p-chandni-kinky.jpg';
-import pRaw from '../assets/photos/p-rekha-raw.jpg';
-import pBlonde from '../assets/photos/p-roshni-honeyblonde.jpg';
-
-const productFallback = (product = {}) => {
-  const key = `${product.name || ''} ${product.slug || ''} ${product.category?.name || ''}`.toLowerCase();
-  if (/kinky/.test(key)) return pKinky;
-  if (/curly|deep curl/.test(key)) return pCurly;
-  if (/water|temple|wavy/.test(key)) return pTemple;
-  if (/body wave|bodywave/.test(key)) return pBody;
-  if (/straight/.test(key)) return pStraight;
-  if (/raw|bundle/.test(key)) return pRaw;
-  if (/blonde|613|honey/.test(key)) return pBlonde;
-  return pWavy;
-};
+const tool =
+  'inline-flex size-9 items-center justify-center rounded-full border-0 bg-white/95 text-espresso shadow-soft transition duration-200 hover:bg-espresso hover:text-cream aria-pressed:bg-espresso aria-pressed:text-champagne [&[aria-pressed=true]_svg]:fill-current';
 
 /**
- * Product card. All behaviour is unchanged from the previous design:
- * wishlist toggle, compare toggle, quick view (when a handler is passed) and
- * add-to-cart for non-variant products. Variant products go to the detail page.
+ * Product card. Behaviour: wishlist toggle, compare toggle, quick view (when a handler is passed)
+ * and add-to-cart for non-variant products. Variant products go to the detail page.
+ * `view="list"` lays the card out horizontally (Shop list view).
+ * `compact` is a smaller card for secondary shelves: no rating, no cart button, just image, name and price.
  */
-export default function ProductCard({ product, onQuickView }) {
+export default function ProductCard({ product, onQuickView, view = 'grid', compact = false }) {
   const { addToCart, toggleWishlist, isWishlisted } = useStore();
   const { toggleCompare, isComparing } = useCompare();
   const wished = isWishlisted(product.id);
   const comparing = isComparing(product.id);
-  const apiImg = resolveImageUrl(product.image || product.images?.[0]);
-  const img = apiImg || productFallback(product);
-  const img2 = product.images?.[1] ? resolveImageUrl(product.images[1]) : null;
+
+  // FIX: agar `image` khaali ho to gallery ki pehli image use karo (placeholder isi wajah se dikh raha tha)
+  const gallery = Array.isArray(product.images) ? product.images : [];
+  const mainSrc = product.image || gallery[0];
+  const img = mainSrc ? resolveImageUrl(mainSrc) : null;
+  const secondSrc = gallery.find((g) => g && g !== mainSrc);
+  const img2 = secondSrc ? resolveImageUrl(secondSrc) : null;
+
   const href = `/product/${product.id}`;
   const onSale = product.discountPct > 0;
+  const soldOut = !product.hasVariants && product.stock === 0;
+  const lowStock = !product.hasVariants && product.stock > 0 && product.stock <= 5;
+  const list = view === 'list';
+  const showMetaRow = !compact && (product.rating > 0 || lowStock);
 
   return (
-    <article className="pc">
-      <div className="pc-media">
-        <Link to={href} aria-label={product.name} tabIndex={-1} className="pc-media-link" style={{ position: 'absolute', inset: 0 }}>
-          <img src={img} alt={product.name} loading="lazy" />
-          {img2 && img2 !== img && <img className="pc-img-2" src={img2} alt="" loading="lazy" aria-hidden="true" />}
+    <article className={cx(
+      'group relative flex h-full overflow-hidden rounded-xl border border-line bg-white transition duration-300 ease-soft hover:border-line-strong hover:shadow-card focus-within:shadow-card',
+      list ? 'flex-row' : 'flex-col',
+    )}>
+      <div className={cx('relative block aspect-[4/5] overflow-hidden bg-sand', list && 'flex-[0_0_min(34%,220px)]')}>
+        <Link to={href} aria-label={product.name} tabIndex={-1} className="absolute inset-0">
+          {img
+            ? <img src={img} alt={product.name} loading="lazy" className={cx('absolute inset-0 size-full object-cover transition duration-[800ms] ease-soft group-hover:scale-105', soldOut && 'opacity-60')} />
+            : <span className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(160deg,#f3e9dc,#e9d9c4)] text-walnut/35"><FiImage size={34} aria-hidden="true" /></span>}
+          {img && img2 && img2 !== img && (
+            <img src={img2} alt="" loading="lazy" aria-hidden="true" className="absolute inset-0 size-full object-cover opacity-0 transition duration-500 ease-soft group-hover:scale-105 group-hover:opacity-100" />
+          )}
         </Link>
 
-        <div className="pc-badges">
-          {(product.saleBadgeText || product.badge) && <span className="badge badge-dark">{product.saleBadgeText || product.badge}</span>}
+        <div className="absolute left-2 top-2 z-[2] flex flex-col items-start gap-1.5">
+          {(product.saleBadgeText || product.badge) && <Badge kind="dark">{product.saleBadgeText || product.badge}</Badge>}
+          {onSale && !product.saleBadgeText && <Badge kind="sale">-{product.discountPct}%</Badge>}
+          {soldOut && <Badge kind="out">Sold out</Badge>}
         </div>
 
-        <div className="pc-tools">
+        <div className="absolute right-2 top-2 z-[3] flex flex-col gap-2">
           <button
-            type="button" className="pc-tool" aria-pressed={wished}
+            type="button" className={tool} aria-pressed={wished}
             aria-label={wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
             onClick={() => toggleWishlist(product)}
           >
             <FiHeart size={16} />
           </button>
-          <button
-            type="button" className="pc-tool pc-tool--compare" aria-pressed={comparing}
+          {!compact && <button
+            type="button" aria-pressed={comparing}
             aria-label={comparing ? `Remove ${product.name} from compare` : `Compare ${product.name}`}
             onClick={() => toggleCompare(product)}
+            className={cx(tool, '-translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 aria-pressed:translate-y-0 aria-pressed:opacity-100 [@media(hover:none)]:hidden')}
           >
             <FiColumns size={16} />
-          </button>
+          </button>}
         </div>
 
-        {onQuickView && (
-          <button type="button" className="pc-quick" onClick={() => onQuickView(product)}>
+        {onQuickView && !compact && (
+          <button
+            type="button" onClick={() => onQuickView(product)}
+            className="absolute inset-x-2.5 bottom-2.5 z-[3] inline-flex min-h-[40px] translate-y-2 items-center justify-center gap-2 rounded-md border-0 bg-white/95 text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-espresso opacity-0 shadow-soft transition duration-300 ease-soft hover:bg-espresso hover:text-cream group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 [@media(hover:none)]:hidden"
+          >
             <FiEye size={14} aria-hidden="true" /> Quick view
           </button>
         )}
       </div>
 
-      <div className="pc-body">
-        <h3 className="pc-name"><Link to={href}>{product.name}</Link></h3>
+      <div className={cx('flex flex-1 flex-col gap-1.5', compact ? 'px-3 pb-3 pt-3' : 'px-3.5 pb-3.5 pt-3.5', list && 'justify-center')}>
+        <h3 className={cx('line-clamp-2 font-sans font-semibold leading-[1.35] text-espresso', compact ? 'text-[0.82rem]' : 'text-[0.92rem]')}>
+          <Link to={href} className="transition-colors hover:text-brand">{product.name}</Link>
+        </h3>
 
-        {product.rating > 0 && (
-          <div className="rating-row">
-            <StarRating value={product.rating} size={12} />
-            <span>{product.reviews > 0 ? `(${product.reviews})` : product.rating}</span>
+        {/* FIX: rating/stock row sirf tab dikhti hai jab data ho, warna title aur price ke beech faltu gap banta tha */}
+        {showMetaRow && (
+          <div className="flex min-h-[18px] items-center gap-2 text-[0.78rem] text-muted">
+            {product.rating > 0 && (
+              <>
+                <StarRating value={product.rating} size={12} />
+                <span>{product.reviews > 0 ? `(${product.reviews})` : product.rating}</span>
+              </>
+            )}
+            {lowStock && <span className="font-semibold text-sale">Only {product.stock} left</span>}
           </div>
         )}
 
-        <div className="pc-foot">
-          <div className="price-row">
-            <span className="price-now">{rupee(product.price)}</span>
-            {onSale && <span className="price-was">{rupee(product.mrp)}</span>}
-            {onSale && <span className="price-off">{product.discountPct}% off</span>}
+        <div className={cx('mt-auto flex flex-col gap-3', compact ? 'pt-0' : 'pt-2', list && 'mt-2 max-w-80')}>
+          {/* FIX: "21% off" chip hata diya, kyunki image par "-21%" badge pehle se hai */}
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className={cx('font-sans font-bold tabular-nums text-espresso', compact ? 'text-[0.95rem]' : 'text-[1.08rem]')}>{rupee(product.price)}</span>
+            {onSale && <span className="text-[0.85rem] tabular-nums text-muted line-through">{rupee(product.mrp)}</span>}
           </div>
-          {product.hasVariants ? (
-            <Link to={href} className="btn btn-black btn-sm pc-add">Select Options</Link>
+          {compact ? null : product.hasVariants ? (
+            <Button to={href} variant="dark" size="sm" block className="min-h-10 tracking-[0.08em]">Select Options</Button>
           ) : (
-            <button type="button" className="btn btn-black btn-sm pc-add" onClick={() => addToCart(product)}>
-              Add to Cart
-            </button>
+            <Button variant="dark" size="sm" block disabled={soldOut} className="min-h-10 gap-2 tracking-[0.08em]" onClick={() => addToCart(product)}>
+              {soldOut ? 'Sold out' : <><FiShoppingBag size={15} aria-hidden="true" /> Add to Cart</>}
+            </Button>
           )}
         </div>
       </div>

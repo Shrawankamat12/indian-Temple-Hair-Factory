@@ -10,9 +10,8 @@ function getRemaining(target) {
 }
 
 export default function CountdownTimer({ hours = 8, endsAt }) {
-  // If the admin has set a real Flash Sale end date/time, count down to that —
-  // but only if it's a valid date AND still in the future. Otherwise fall back
-  // to a rolling "N hours from now" timer instead of freezing at 00:00:00.
+  // Count down to the admin's Flash Sale end time when it is valid AND in the future;
+  // otherwise fall back to a rolling "N hours from now" timer instead of freezing at 00:00:00.
   const [target] = useState(() => {
     const parsed = endsAt ? new Date(endsAt).getTime() : NaN;
     const isValidFuture = !Number.isNaN(parsed) && parsed > Date.now();
@@ -29,11 +28,11 @@ export default function CountdownTimer({ hours = 8, endsAt }) {
   const pad = (n) => String(n).padStart(2, '0');
 
   return (
-    <div className="countdown">
+    <div className="flex gap-2">
       {[['H', t.h], ['M', t.m], ['S', t.s]].map(([label, v]) => (
-        <div className="countdown-cell" key={label}>
-          <span className="countdown-num">{pad(v)}</span>
-          <span className="countdown-label">{label}</span>
+        <div className="flex min-w-14 flex-col items-center rounded-md bg-espresso px-3 py-2 text-cream" key={label}>
+          <span className="font-sans text-xl font-bold tabular-nums leading-none">{pad(v)}</span>
+          <span className="mt-1 text-[0.62rem] uppercase tracking-[0.14em] text-champagne">{label}</span>
         </div>
       ))}
     </div>

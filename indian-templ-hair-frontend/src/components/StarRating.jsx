@@ -1,8 +1,8 @@
-export default function StarRating({ value = 5, size = 13 }) {
+export default function StarRating({ value = 5, size = 13, className = '' }) {
   const full = Math.floor(value);
   const hasHalf = value - full >= 0.4 && value - full < 0.9;
   return (
-    <span className="stars" role="img" aria-label={`${value} out of 5 stars`}>
+    <span className={`inline-flex gap-0.5 align-middle text-gold ${className}`} role="img" aria-label={`${value} out of 5 stars`}>
       {Array.from({ length: 5 }).map((_, i) => {
         const filled = i < full || (i === full && hasHalf);
         return (

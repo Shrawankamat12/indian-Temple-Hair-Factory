@@ -3,6 +3,9 @@ import PhotoBlock from '../components/PhotoBlock';
 import Reveal from '../components/Reveal';
 import SectionHeading from '../components/SectionHeading';
 import { processSteps, certifications, exportCountries } from '../data/content';
+import Container from '../components/Container';
+import Button from '../components/Button';
+
 import factorySorting from '../assets/photos/factory-sorting.jpg';
 import factoryWefting from '../assets/photos/factory-wefting.jpg';
 import lengthInspection from '../assets/photos/cat-bulk.jpg';
@@ -24,49 +27,50 @@ export default function Factory() {
     <>
       <PageHeader crumbs={[{ label: 'Factory' }]} title="Factory & Manufacturing" lede="A transparent look at how raw hair becomes a finished, export-ready bundle." />
 
-      <Reveal as="section" className="section">
-        <div className="container">
-          <SectionHeading title="Our manufacturing process" sub="From source to shipment." />
-          <ol className="steps-grid">
+      <Reveal as="section" className="py-14 sm:py-20 lg:py-24">
+        <Container>
+          <SectionHeading title="Our manufacturing process" sub="From source to shipment." rule />
+          <ol className="m-0 grid list-none gap-[clamp(20px,3vw,36px)] p-0 sm:grid-cols-2 lg:grid-cols-3">
             {processSteps.map((s, i) => (
-              <li key={s.step}>
-                <span className="steps-grid-num num">{String(i + 1).padStart(2, '0')}</span>
-                <h3>{s.step}</h3>
-                <p>{s.desc}</p>
+              <li key={s.step} className="rounded-xl border border-line bg-white p-6">
+                <span className="mb-3 block font-display text-[2.4rem] leading-none tabular-nums text-gold-soft [-webkit-text-stroke:1px_var(--color-gold)]">{String(i + 1).padStart(2, '0')}</span>
+                <h3 className="mb-2 text-[1.1rem]">{s.step}</h3>
+                <p className="text-[0.9rem] text-muted">{s.desc}</p>
               </li>
             ))}
           </ol>
-        </div>
+        </Container>
       </Reveal>
 
-      <Reveal as="section" className="section section--alt">
-        <div className="container">
-          <SectionHeading title="Factory tour gallery" sub="Najafgarh Road, New Delhi." />
-          <div className="tour">
+      <Reveal as="section" className="bg-sand py-14 sm:py-20 lg:py-24">
+        <Container>
+          <SectionHeading title="Factory tour gallery" sub="Najafgarh Road, New Delhi." rule />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {factoryGallery.map((g, i) => (
-              <PhotoBlock key={g.label} tone={['espresso', 'brown', 'gold', 'beige', 'cream', 'brown'][i]} ratio="4/3" rounded={4} label={g.label} src={g.img} alt={g.label} />
+              <PhotoBlock key={g.label} tone={['espresso', 'brown', 'gold', 'beige', 'cream', 'brown'][i]} ratio="4/3" rounded={8} label={g.label} src={g.img} alt={g.label} />
             ))}
           </div>
-        </div>
+        </Container>
       </Reveal>
 
-      <Reveal as="section" className="section">
-        <div className="container">
+      <Reveal as="section" className="py-14 sm:py-20 lg:py-24">
+        <Container>
           <SectionHeading center title="Quality & certifications" rule />
-          <ul className="certs">
-            {certifications.map((c) => <li key={c}>{c}</li>)}
+          <ul className="m-0 flex list-none flex-wrap justify-center gap-3 p-0">
+            {certifications.map((c) => <li key={c} className="rounded-full border border-gold bg-white px-[22px] py-3 text-[0.88rem] font-semibold text-walnut">{c}</li>)}
           </ul>
-        </div>
+        </Container>
       </Reveal>
 
-      <Reveal as="section" className="section section--dark">
-        <div className="container">
-          <SectionHeading center title="Export countries" sub="Worldwide shipping." />
-          <ul className="countries">
-            {exportCountries.map((c) => <li key={c}>{c}</li>)}
-            <li className="is-more">+ 38 more</li>
+      <Reveal as="section" className="on-dark bg-espresso py-14 text-cream sm:py-20 lg:py-24">
+        <Container>
+          <SectionHeading center title="Export countries" sub="Worldwide shipping." rule />
+          <ul className="m-0 flex list-none flex-wrap justify-center gap-2.5 p-0">
+            {exportCountries.map((c) => <li key={c} className="rounded-full border border-champagne/20 px-4 py-2 text-[0.84rem] text-cream/70">{c}</li>)}
+            <li className="rounded-full border border-gold px-4 py-2 text-[0.84rem] font-semibold text-champagne">+ 38 more</li>
           </ul>
-        </div>
+          <div className="mt-8 flex justify-center"><Button to="/wholesale" size="lg">Start a wholesale enquiry</Button></div>
+        </Container>
       </Reveal>
     </>
   );

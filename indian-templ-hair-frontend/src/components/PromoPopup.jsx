@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { FiX } from 'react-icons/fi';
 import { useBanners } from '../hooks/useStoreData';
-import { imageOr, isExternal } from '../lib/media';
+import { imageOr } from '../lib/media';
+import Overlay from './Overlay';
+import Button from './Button';
+import { closeBtn } from './QuickView';
+import { cx } from '../lib/ui';
 
 const KEY = 'ith-popup-seen';
 
@@ -38,20 +42,23 @@ export default function PromoPopup() {
   if (!open || !banner) return null;
   const img = imageOr(banner.img);
   const cta = banner.ctaText && banner.ctaLink && (
-    isExternal(banner.ctaLink)
-      ? <a href={banner.ctaLink} className="btn btn-primary" onClick={close}>{banner.ctaText}</a>
-      : <Link to={banner.ctaLink} className="btn btn-primary" onClick={close}>{banner.ctaText}</Link>
+    /^https?:\/\//i.test(banner.ctaLink)
+      ? <Button href={banner.ctaLink} onClick={close}>{banner.ctaText}</Button>
+      : <Button to={banner.ctaLink} onClick={close}>{banner.ctaText}</Button>
   );
 
   return (
     <>
-      <div className="overlay-backdrop open" onClick={close} aria-hidden="true" />
-      <div className="popup" role="dialog" aria-modal="true" aria-label={banner.title || 'Offer'}>
-        <button type="button" className="qv-close" onClick={close} aria-label="Close"><FiX size={18} /></button>
-        {img && <div className="popup-img"><img src={img} alt="" /></div>}
-        <div className="popup-body">
-          {banner.title && <h2>{banner.title}</h2>}
-          {banner.subtitle && <p>{banner.subtitle}</p>}
+      <Overlay open onClick={close} className="z-[85]" />
+      <div
+        role="dialog" aria-modal="true" aria-label={banner.title || 'Offer'}
+        className={cx('fixed left-1/2 top-1/2 z-[90] max-h-[90vh] w-[min(440px,92vw)] -translate-x-1/2 -translate-y-1/2 animate-pop-in overflow-auto rounded-xl bg-white shadow-deep')}
+      >
+        <button type="button" className={cx(closeBtn, 'absolute right-2.5 top-2.5 z-[2]')} onClick={close} aria-label="Close"><FiX size={18} /></button>
+        {img && <div className="aspect-[16/10] bg-sand"><img src={img} alt="" className="size-full object-cover" /></div>}
+        <div className="grid justify-items-start gap-2.5 p-[26px]">
+          {banner.title && <h2 className="text-2xl">{banner.title}</h2>}
+          {banner.subtitle && <p className="m-0 text-muted">{banner.subtitle}</p>}
           {cta}
         </div>
       </div>

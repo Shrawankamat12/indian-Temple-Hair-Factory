@@ -8,6 +8,8 @@ import AnnouncementBar from './AnnouncementBar';
 import MegaMenu from './MegaMenu';
 import NavSearch from './NavSearch';
 import MobileMenu from './MobileMenu';
+import Container from './Container';
+import { cx, iconBtn } from '../lib/ui';
 import logo from '../assets/logo-header.png';
 
 // Company pages stay reachable (routes are unchanged): utility links on desktop, full list in the drawer.
@@ -21,6 +23,12 @@ const LINKS = [
   { to: '/contact', label: 'Contact' },
 ];
 const UTILITY = LINKS.filter((l) => ['/about', '/wholesale', '/contact'].includes(l.to));
+
+const navLink =
+  'relative whitespace-nowrap py-3 text-[0.78rem] font-semibold uppercase tracking-[0.06em] text-espresso transition-colors hover:text-brand after:absolute after:inset-x-0 after:bottom-1.5 after:h-0.5 after:origin-left after:scale-x-0 after:bg-brand after:transition-transform after:duration-300 after:ease-soft hover:after:scale-x-100';
+
+const headAct =
+  'relative inline-flex flex-col items-center gap-0.5 px-1.5 py-0.5 text-[0.68rem] font-medium text-espresso transition-colors hover:text-brand';
 
 export default function Navbar() {
   const { cartCount, wishlist, user } = useStore();
@@ -73,56 +81,80 @@ export default function Navbar() {
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   return (
-    <header className="hdr">
+    <header className="sticky -top-10 z-[60]">
       <AnnouncementBar />
-      <div ref={barRef} className={`hdr-bar ${scrolled ? 'is-scrolled' : ''}`}>
-        <div className="container hdr-grid">
-          <button type="button" className="icon-btn hdr-burger" onClick={() => setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen}>
+      <div
+        ref={barRef}
+        className={cx('relative border-b border-line bg-white transition-shadow duration-300', scrolled && 'shadow-[0_10px_30px_-18px_rgb(30_20_16/0.35)]')}
+      >
+        <Container className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 py-2 nav:grid-cols-[auto_minmax(0,1fr)_auto] nav:grid-rows-[auto_auto] nav:gap-x-8 nav:gap-y-0 nav:py-1.5">
+          <button
+            type="button" onClick={() => setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen}
+            className={cx(iconBtn, '-ml-2.5 col-start-1 row-start-1 nav:hidden')}
+          >
             <FiMenu size={22} />
           </button>
 
-          {/* Logo sits in the left column and spans both header rows (search row + category row) */}
-          <Link to="/" className="hdr-logo" aria-label="Indian Temple Hair Export, home">
-            <img src={logo} alt="Indian Temple Hair Export" width="102" height="92" decoding="async" />
+          {/* Logo: centred on mobile, spans both header rows on desktop */}
+          <Link
+            to="/" aria-label="Indian Temple Hair Export, home"
+            className="group col-start-2 row-start-1 inline-flex items-center justify-self-center nav:col-start-1 nav:row-span-2 nav:justify-self-auto nav:py-0.5"
+          >
+            <img
+              src={logo} alt="Indian Temple Hair Export" width="102" height="92" decoding="async"
+              className="h-[52px] w-auto max-w-none object-contain transition-transform duration-300 ease-soft group-hover:scale-[1.03] sm:h-[58px] nav:h-[100px]"
+            />
           </Link>
 
-          <NavSearch className="hdr-search" />
+          <NavSearch className="col-span-full row-start-2 nav:col-span-1 nav:col-start-2 nav:row-start-1 nav:my-2" />
 
-          <div className="hdr-actions">
-            <Link className="hdr-act hdr-account" to={user ? '/account' : '/login'} aria-label={user ? 'My account' : 'Sign in'}>
+          <div className="col-start-3 row-start-1 flex items-center gap-2 justify-self-end nav:gap-5">
+            <Link className={cx(headAct, 'max-nav:hidden')} to={user ? '/account' : '/login'} aria-label={user ? 'My account' : 'Sign in'}>
               <FiUser size={20} /><span>{user ? 'Account' : 'Sign in'}</span>
             </Link>
-            <Link className="hdr-act" to="/wishlist" aria-label={`Wishlist${wishlist.length ? `, ${wishlist.length} items` : ''}`}>
-              <FiHeart size={20} /><span>Wishlist</span>
-              {wishlist.length > 0 && <span className="hdr-count">{wishlist.length}</span>}
+            <Link className={headAct} to="/wishlist" aria-label={`Wishlist${wishlist.length ? `, ${wishlist.length} items` : ''}`}>
+              <FiHeart size={20} /><span className="hidden nav:inline">Wishlist</span>
+              {wishlist.length > 0 && <Count n={wishlist.length} />}
             </Link>
-            <Link className="hdr-act" to="/cart" aria-label={`Cart${cartCount ? `, ${cartCount} items` : ''}`}>
-              <FiShoppingBag size={20} /><span>Cart</span>
-              {cartCount > 0 && <span className="hdr-count">{cartCount}</span>}
+            <Link className={headAct} to="/cart" aria-label={`Cart${cartCount ? `, ${cartCount} items` : ''}`}>
+              <FiShoppingBag size={20} /><span className="hidden nav:inline">Cart</span>
+              {cartCount > 0 && <Count n={cartCount} />}
             </Link>
           </div>
 
-          <nav className="hdr-sub" aria-label="Primary">
-            <div ref={shopRef} className="hdr-shop" onMouseEnter={openMega} onMouseLeave={closeMega}
+          <nav
+            aria-label="Primary"
+            className="col-[2/-1] row-start-2 hidden min-h-11 min-w-0 items-center gap-[clamp(14px,2.2vw,34px)] overflow-y-hidden overflow-x-auto border-t border-line [scrollbar-width:none] nav:flex [&::-webkit-scrollbar]:hidden"
+          >
+            <div
+              ref={shopRef} className="inline-flex items-center" onMouseEnter={openMega} onMouseLeave={closeMega}
               onBlur={(e) => {
                 const next = e.relatedTarget;
                 if (!e.currentTarget.contains(next) && !megaRef.current?.contains(next)) setMega(false);
-              }}>
-              <NavLink to="/shop" end className={({ isActive }) => `hdr-link ${isActive ? 'active' : ''}`}>Shop</NavLink>
-              <button type="button" className="hdr-chevron" aria-label="Toggle shop menu" aria-expanded={mega} aria-controls="mega-menu"
-                onClick={() => (mega ? setMega(false) : openMega())}>
-                <FiChevronDown size={14} style={{ transform: mega ? 'rotate(180deg)' : 'none' }} />
+              }}
+            >
+              <NavLink to="/shop" end className={({ isActive }) => cx(navLink, isActive && 'text-brand after:scale-x-100')}>Shop</NavLink>
+              <button
+                type="button" aria-label="Toggle shop menu" aria-expanded={mega} aria-controls="mega-menu"
+                onClick={() => (mega ? setMega(false) : openMega())}
+                className="inline-flex h-7 w-[22px] items-center justify-center border-0 bg-transparent text-brand"
+              >
+                <FiChevronDown size={14} className={cx('transition-transform duration-[250ms] ease-soft', mega && 'rotate-180')} />
               </button>
             </div>
             {categories.map((c) => (
-              <Link key={c.slug} to={`/shop?category=${c.slug}`} className="hdr-link">{c.name}</Link>
+              <Link key={c.slug} to={`/shop?category=${c.slug}`} className={navLink}>{c.name}</Link>
             ))}
-            <Link to="/shop?onSale=1" className="hdr-link hdr-link--offers">Offers</Link>
-            <span className="hdr-sub-util">
-              {UTILITY.map((l) => <NavLink key={l.to} to={l.to} className="hdr-util">{l.label}</NavLink>)}
+            <Link to="/shop?onSale=1" className={cx(navLink, 'text-sale hover:text-sale after:bg-sale')}>Offers</Link>
+            <span className="ml-auto flex gap-[22px]">
+              {UTILITY.map((l) => (
+                <NavLink key={l.to} to={l.to} className={({ isActive }) => cx('whitespace-nowrap text-[0.76rem] text-muted transition-colors hover:text-brand', isActive && 'text-brand')}>
+                  {l.label}
+                </NavLink>
+              ))}
             </span>
           </nav>
-        </div>
+        </Container>
 
         <div ref={megaRef} onMouseEnter={openMega} onMouseLeave={closeMega}>
           <MegaMenu id="mega-menu" categories={categories} open={mega} onNavigate={() => setMega(false)} />
@@ -131,5 +163,13 @@ export default function Navbar() {
 
       <MobileMenu open={menuOpen} onClose={closeMenu} links={LINKS} categories={categories} user={user} wishlistCount={wishlist.length} />
     </header>
+  );
+}
+
+function Count({ n }) {
+  return (
+    <span className="absolute -right-0.5 -top-1 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-brand px-1 text-[0.64rem] font-bold text-white">
+      {n}
+    </span>
   );
 }

@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiCheck, FiArrowRight, FiCopy } from 'react-icons/fi';
-import CategoryCard from '../components/CategoryCard';
 import ProductCarousel from '../components/ProductCarousel';
 import TrustBadges from '../components/TrustBadges';
 import HeroSlider from '../components/HeroSlider';
@@ -10,6 +9,9 @@ import Reveal from '../components/Reveal';
 import SectionHeading from '../components/SectionHeading';
 import StarRating from '../components/StarRating';
 import BadgeIcon from '../components/BadgeIcon';
+import Container from '../components/Container';
+import CountdownTimer from '../components/CountdownTimer';
+import { btn, cx, eyebrow, eyebrowGold } from '../lib/ui';
 import NewsletterForm from '../components/NewsletterForm';
 import RecentlyViewed from '../components/RecentlyViewed';
 import QuickView from '../components/QuickView';
@@ -55,6 +57,12 @@ const FALLBACK_OFFER = [catRaw, catBlonde, catBulk, catWigs];
 const FALLBACK_SEASONAL = [pStraight, pBody, pWavy, pCurly];
 const FALLBACK_SPECIAL = [catWigs, catBulk, catRaw, catBlonde];
 
+// ---- Section rhythm: one spacing scale + alternating backgrounds so the page reads in clear bands ----
+const BAND = 'py-10 sm:py-14 lg:py-[72px]'; // content sections
+const BAND_SM = 'py-6 sm:py-8 lg:py-10'; // promo strips and banners
+const BAND_WHITE = cx(BAND, 'border-y border-line bg-white'); // light alternate band
+const BAND_SAND = cx(BAND, 'bg-sand/60'); // soft alternate band
+
 // Keyword → bundled photo, matched against the admin-entered name.
 const categoryFallback = (c) => {
   const k = `${c.slug} ${c.name}`.toLowerCase();
@@ -80,9 +88,8 @@ const textureFallback = (name = '') => {
 // Default section order (mockup). Sections that have an entry in Website Content → Home Sections
 // follow the admin's order/enabled flags; the rest keep their default slot and are always on.
 const SECTION_ORDER = [
-  'categories', 'collections', 'textures', 'midBanner', 'bestSellers', 'offerCards', 'whyUs', 'process',
-  'factorySpotlight', 'seasonalOffers', 'specialOffers', 'beforeAfter', 'careGuide', 'testimonials',
-  'wholesale', 'exportBand', 'globalExport', 'instagram',
+  'categories', 'textures', 'midBanner', 'flashSale', 'bestSellers', 'newArrivals', 'offerCards', 'whyUs', 'process',
+  'seasonalOffers', 'specialOffers', 'beforeAfter', 'careGuide', 'testimonials', 'exportBand', 'instagram',
 ];
 
 // Hero extras. Real values from Website Content → Hero Banner (stats, badges) win; these are fallbacks
@@ -92,7 +99,6 @@ const DEFAULT_HERO_STATS = [
   { value: '50+', label: 'Export countries' },
   { value: '24 hrs', label: 'Dispatch from Delhi' },
 ];
-
 
 function orderSections(homeSections = []) {
   const flags = new Map(homeSections.map((s) => [s.key, s]));
@@ -124,25 +130,32 @@ function CouponBanner({ coupon, image }) {
     } catch { /* clipboard blocked: the code stays visible to copy by hand */ }
   };
   return (
-    <div className="offer">
-      <img className="offer-bg" src={image} alt="" loading="lazy" />
-      <div className="offer-copy">
-        {coupon.eyebrow && <span className="offer-eyebrow">{coupon.eyebrow}</span>}
-        <h3 className="offer-title">
-          {coupon.discountText && <span className="offer-disc">{coupon.discountText}</span>} {coupon.title}
+    <div className="on-dark relative isolate grid items-center gap-[clamp(24px,5vw,72px)] overflow-hidden rounded-2xl bg-espresso p-[clamp(26px,5vw,60px)] text-cream shadow-deep md:grid-cols-[1.25fr_.75fr]">
+      <img className="absolute inset-0 -z-20 size-full object-cover opacity-55" src={image} alt="" loading="lazy" />
+      <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgb(20_12_9/0.96)_0%,rgb(20_12_9/0.78)_55%,rgb(20_12_9/0.45)_100%)]" />
+      <div className="pointer-events-none absolute -right-[120px] -top-40 -z-10 size-[420px] rounded-full border border-champagne/25" />
+      <div>
+        {coupon.eyebrow && (
+          <span className="mb-3.5 inline-block rounded-full bg-champagne px-3.5 py-1.5 text-[0.7rem] font-extrabold uppercase tracking-[0.16em] text-espresso">{coupon.eyebrow}</span>
+        )}
+        <h3 className="max-w-[18ch] text-[clamp(1.9rem,4vw,3.2rem)] leading-[1.08] text-cream">
+          {coupon.discountText && <span className="text-champagne">{coupon.discountText}</span>} {coupon.title}
         </h3>
       </div>
-      <div className="offer-side">
+      <div className="flex flex-col items-start gap-[18px]">
         {coupon.code && (
-          <div className="offer-code">
-            <span className="offer-code-label">Use code</span>
-            <b>{coupon.code}</b>
-            <button type="button" className="offer-copy-btn" onClick={copy} aria-label={`Copy code ${coupon.code}`}>
+          <div className="flex flex-wrap items-center gap-3.5 rounded-[14px] border-[1.5px] border-dashed border-champagne bg-cream/[0.07] py-3 pl-5 pr-3">
+            <span className="text-[0.72rem] uppercase tracking-[0.14em] text-cream/75">Use code</span>
+            <b className="font-display text-2xl font-normal tracking-[0.14em] text-champagne">{coupon.code}</b>
+            <button
+              type="button" onClick={copy} aria-label={`Copy code ${coupon.code}`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-cream px-3.5 text-[0.78rem] font-bold text-espresso transition-colors hover:bg-champagne"
+            >
               {copied ? <><FiCheck size={14} /> Copied</> : <><FiCopy size={14} /> Copy</>}
             </button>
           </div>
         )}
-        {coupon.ctaText && <TileAnchor to={coupon.ctaLink || '/shop'} className="btn btn-primary btn-lg">{coupon.ctaText} <FiArrowRight size={16} /></TileAnchor>}
+        {coupon.ctaText && <TileAnchor to={coupon.ctaLink || '/shop'} className={btn('primary', 'lg')}>{coupon.ctaText} <FiArrowRight size={16} /></TileAnchor>}
       </div>
     </div>
   );
@@ -164,6 +177,8 @@ export default function Home() {
   const { products: bestSellerFlag } = useProductsByFlag('bestSeller');
   const { products: bestSellerBadge } = useProductsByBadge('Bestseller');
   const bestSellers = mergeShelf(bestSellerFlag, bestSellerBadge);
+  const { products: newArrivals } = useProductsByFlag('newArrival', 10);
+  const { products: flashSaleProducts } = useProductsByFlag('flashSale', 10);
 
   const recentlyViewed = useRecentlyViewedList();
   const [quickViewProduct, setQuickViewProduct] = useState(null);
@@ -237,346 +252,325 @@ export default function Home() {
   const why = sc?.whyChooseUs || {};
   const whyItems = (why.items || []).filter((it) => it?.title).slice(0, 6);
 
-  const premiumCollections = [
-    { title: 'Temple Hair', text: 'Authentic Indian temple hair selected for natural beauty.', image: catRaw, link: '/shop?search=temple' },
-    { title: 'Raw Indian Hair', text: 'Natural-looking hair with a premium raw-hair finish.', image: pTemple, link: '/shop?search=raw' },
-    { title: 'Virgin Hair', text: 'Premium virgin styles for salons, stylists and brands.', image: pStraight, link: '/shop?search=virgin' },
-    { title: 'Bulk Hair', text: 'Bulk quantities for wholesale and professional production.', image: catBulk, link: '/shop?search=bulk' },
-  ];
-
-  const factoryPhotos = [
-    [factorySorting, 'Hand Sorting'],
-    [factoryWefting, 'Professional Wefting'],
-    [factoryPacking, 'Quality Packing'],
-    [factoryExport, 'Export Ready'],
-  ];
-
   const sections = {
     categories: shopCategories.length > 0 && (
-      <section className="section section--tight">
-        <div className="container">
+      <Reveal as="section" className={BAND}>
+        <Container>
           <SectionHeading title="Shop by Category" sub="Wigs, closures, frontals and bulk hair, straight from our New Delhi factory." rule action={{ to: '/shop', label: 'View all' }} />
-          <div className="cat-grid">
-            {shopCategories.map((c) => <CategoryCard category={c} shape="round" fallback={categoryFallback(c)} key={c.slug} />)}
-          </div>
-        </div>
-      </section>
-    ),
-
-    collections: (
-      <Reveal as="section" className="section section--tight home-collections">
-        <div className="container">
-          <div className="home-center">
-            <p className="home-eyebrow">Premium Collections</p>
-            <SectionHeading center rule title="Hair Collections Made for Professionals" sub="Explore Indian hair collections for salons, stylists, brands and wholesale buyers." />
-          </div>
-          <div className="collection-grid">
-            {premiumCollections.map((item) => (
-              <Link to={item.link} className="collection-card" key={item.title}>
-                <span className="collection-img"><img src={item.image} alt={item.title} loading="lazy" /></span>
-                <span className="collection-overlay" />
-                <span className="collection-copy">
-                  <strong>{item.title}</strong>
-                  <span>{item.text}</span>
-                  <em>Explore collection <FiArrowRight size={15} /></em>
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </Reveal>
-    ),
-
-    textures: textureTiles.length > 0 && (
-      <section className="section section--tight">
-        <div className="container">
-          <SectionHeading title="Shop by Texture" sub="Pick the wave, curl or straight that suits you." rule action={{ to: '/shop', label: 'View all' }} />
-          <div className="tex-row">
-            {textureTiles.map((t) => {
-              const img = imageOr(t.image, textureFallback(t.name));
+          <div className="flex flex-wrap justify-center gap-x-[clamp(20px,4vw,56px)] gap-y-6">
+            {shopCategories.map((c) => {
+              const img = imageOr(c.image || c.img, categoryFallback(c));
               return (
-                <Link key={t.id} to={`/shop?texture=${encodeURIComponent(t.name)}`} className="tex">
-                  <span className="tex-img">{img ? <img src={img} alt="" loading="lazy" /> : <span className="tex-fallback">{t.name.charAt(0)}</span>}</span>
-                  <span className="tex-name">{t.name}</span>
+                <Link key={c.slug} to={`/shop?category=${c.slug}`} className="group w-[clamp(96px,26vw,148px)] text-center">
+                  {/* ring + image that fills the whole circle */}
+                  <span className="mx-auto block aspect-square rounded-full border border-line bg-white p-1.5 transition duration-300 group-hover:border-brand group-hover:shadow-[0_10px_24px_-12px_rgb(30_20_16/0.45)]">
+                    <span className="relative block size-full overflow-hidden rounded-full bg-[linear-gradient(135deg,#3a2618,#6b3e22)]">
+                      {img
+                        ? <img src={img} alt="" loading="lazy" className="size-full object-cover transition-transform duration-[800ms] ease-soft group-hover:scale-[1.08]" />
+                        : <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center font-display text-4xl text-champagne/60">{c.name.charAt(0)}</span>}
+                    </span>
+                  </span>
+                  <span className="mt-3 block text-[0.9rem] font-semibold leading-snug text-espresso transition-colors group-hover:text-brand">{c.name}</span>
                 </Link>
               );
             })}
           </div>
-        </div>
-      </section>
+        </Container>
+      </Reveal>
+    ),
+
+    textures: textureTiles.length > 0 && (
+      <Reveal as="section" className="pb-10 sm:pb-14 lg:pb-[72px]">
+        <Container>
+          <SectionHeading title="Shop by Texture" sub="Pick the wave, curl or straight that suits you." rule action={{ to: '/shop', label: 'View all' }} />
+          <div className="flex gap-[clamp(14px,3vw,40px)] overflow-x-auto px-0.5 pb-2.5 pt-1 [scrollbar-width:none] sm:justify-center [&::-webkit-scrollbar]:hidden">
+            {textureTiles.map((t) => {
+              const img = imageOr(t.image, textureFallback(t.name));
+              return (
+                <Link key={t.id} to={`/shop?texture=${encodeURIComponent(t.name)}`} className="group w-[clamp(84px,12vw,128px)] flex-none text-center">
+                  <span className="relative block aspect-square overflow-hidden rounded-full border border-line bg-sand transition duration-300 group-hover:border-brand group-hover:shadow-[0_8px_22px_-12px_rgb(30_20_16/0.4)]">
+                    {img
+                      ? <img src={img} alt="" loading="lazy" className="size-full object-cover transition-transform duration-[800ms] ease-soft group-hover:scale-[1.07]" />
+                      : <span className="absolute inset-0 flex items-center justify-center font-display text-3xl text-walnut">{t.name.charAt(0)}</span>}
+                  </span>
+                  <span className="mt-2.5 block text-[0.84rem] font-semibold text-espresso transition-colors group-hover:text-brand">{t.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </Container>
+      </Reveal>
     ),
 
     midBanner: midBanners[0] && (
-      <section className="section section--tight">
-        <div className="container"><PromoTile banner={midBanners[0]} fallback={wigShelf} variant="mid" /></div>
-      </section>
+      <Reveal as="section" className={BAND_SM}>
+        <Container><PromoTile banner={midBanners[0]} fallback={wigShelf} variant="mid" /></Container>
+      </Reveal>
     ),
 
+    flashSale: flashSaleProducts.length > 0 && (
+      <Reveal as="section" className={cx('on-dark relative overflow-hidden bg-[linear-gradient(120deg,#1e1410,#3a2618)] text-cream', BAND)}>
+        <div className="pointer-events-none absolute -right-20 -top-24 size-[420px] rounded-full bg-[radial-gradient(circle,rgb(200_154_61/0.25),transparent_65%)]" />
+        <Container className="relative">
+          <div className="mb-7 flex flex-wrap items-end justify-between gap-5">
+            <div>
+              <p className={cx(eyebrowGold, 'mb-2.5')}>Limited time</p>
+              <h2 className="text-[clamp(1.6rem,3vw,2.4rem)] text-cream">Flash Sale</h2>
+              <p className="mt-2 max-w-[46ch] text-cream/70">Hand-picked pieces at special prices. Grab them before the timer runs out.</p>
+            </div>
+            <CountdownTimer endsAt={flashSaleProducts.find((p) => p.flashSaleEndsAt)?.flashSaleEndsAt} />
+          </div>
+          <ProductCarousel products={flashSaleProducts} onQuickView={setQuickViewProduct} label="Flash sale" />
+        </Container>
+      </Reveal>
+    ),
+
+    // UPDATED: wrapper (max-w-[1000px] mx-auto) hata diya. Carousel khud kam products par left se align karta hai.
     bestSellers: bestSellers.length > 0 && (
-      <Reveal as="section" className="section section--tight">
-        <div className="container">
+      <Reveal as="section" className={BAND}>
+        <Container>
           <SectionHeading title="Best Sellers" sub="The bundles and wigs our customers reorder most." rule action={{ to: '/shop', label: 'View all' }} />
-          <ProductCarousel products={bestSellers.slice(0, 10)} onQuickView={setQuickViewProduct} label="Best sellers" />
-        </div>
+          <ProductCarousel products={bestSellers.slice(0, 10)} onQuickView={setQuickViewProduct} label="Best sellers" size="five" />
+        </Container>
+      </Reveal>
+    ),
+
+    newArrivals: newArrivals.length > 0 && (
+      <Reveal as="section" className={BAND_WHITE}>
+        <Container>
+          <SectionHeading title="New Arrivals" sub="Fresh from the factory floor: the latest wigs, bundles and closures." rule action={{ to: '/shop', label: 'Shop all' }} />
+          <ProductCarousel products={newArrivals.slice(0, 10)} onQuickView={setQuickViewProduct} label="New arrivals" />
+        </Container>
       </Reveal>
     ),
 
     offerCards: promoCards.length > 0 && (
-      <section className="section section--tight">
-        <div className="container promo-row">
+      <Reveal as="section" className={BAND_SM}>
+        <Container className="grid gap-4 md:grid-cols-3">
           {promoCards.map((b, i) => <PromoTile key={b.id} banner={b} fallback={FALLBACK_OFFER[i % FALLBACK_OFFER.length]} variant="card" />)}
-        </div>
-      </section>
+        </Container>
+      </Reveal>
     ),
 
-
     whyUs: whyItems.length > 0 && (
-      <Reveal as="section" className="section home-band home-band--white">
-        <div className="container">
-          <div className="home-center">
-            <p className="home-eyebrow">{why.eyebrow || 'Why Indian Temple Remy Hair Exports'}</p>
-            <SectionHeading center rule title={why.title || 'Straight from the temple floor to your salon'} />
+      <Reveal as="section" className={BAND_WHITE}>
+        <Container className="grid items-start gap-10 lg:grid-cols-[.8fr_1.2fr] lg:gap-16">
+          <div className="lg:sticky lg:top-28">
+            <p className={cx(eyebrow, 'mb-3')}>{why.eyebrow || 'Why Indian Temple Remy Hair Exports'}</p>
+            <h2 className="max-w-[16ch] text-[clamp(1.8rem,3.2vw,2.6rem)] leading-[1.12] text-espresso">{why.title || 'Straight from the temple floor to your salon'}</h2>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link to="/wholesale" className={btn('primary', 'lg')}>Wholesale enquiry <FiArrowRight size={16} /></Link>
+              <Link to="/about" className="inline-flex min-h-12 items-center justify-center rounded-md border border-line-strong px-6 text-[0.9rem] font-semibold text-espresso transition hover:border-espresso hover:bg-sand">Our story</Link>
+            </div>
           </div>
-          <ul className="wy-grid">
+          <ul className="m-0 grid list-none gap-x-10 gap-y-9 p-0 sm:grid-cols-2">
             {whyItems.map((it) => (
-              <li key={it.title} className="wy">
-                <span className="wy-ico"><BadgeIcon label={`${it.title} ${it.description || ''}`} size={24} /></span>
-                <strong>{it.title}</strong>
-                {it.description && <span>{it.description}</span>}
+              <li key={it.title} className="border-t border-line pt-6">
+                <span className="mb-4 inline-flex size-12 items-center justify-center rounded-full bg-sand text-brand"><BadgeIcon label={`${it.title} ${it.description || ''}`} size={22} /></span>
+                <strong className="block font-display text-[1.2rem] font-normal leading-tight text-espresso">{it.title}</strong>
+                {it.description && <span className="mt-2 block text-[0.92rem] leading-relaxed text-muted">{it.description}</span>}
               </li>
             ))}
           </ul>
-        </div>
+        </Container>
       </Reveal>
     ),
 
     process: (
-      <Reveal as="section" className="section section--dark home-band">
-        <div className="container">
-          <div className="home-center">
-            <p className="home-eyebrow home-eyebrow--gold">Our Process</p>
+      <Reveal as="section" className={cx('on-dark bg-espresso text-cream', BAND)}>
+        <Container>
+          <div className="text-center">
+            <p className={cx(eyebrowGold, 'mb-2.5')}>Our Process</p>
             <SectionHeading center rule title="From Temple to Your Doorstep" sub="Every stage, from sourcing to packing, is handled at our New Delhi facility." />
           </div>
-          <div className="proc-photos">
+          <div className="mb-6 grid grid-cols-3 gap-2.5 sm:gap-4">
             {[[factorySorting, 'Hand-sorting'], [factoryWefting, 'Wefting'], [factoryPacking, 'Export packing']].map(([src, label]) => (
-              <figure key={label}><img src={src} alt={label} loading="lazy" /><figcaption>{label}</figcaption></figure>
+              <figure key={label} className="group relative m-0 aspect-[16/9] overflow-hidden rounded-xl border border-champagne/20">
+                <img src={src} alt={label} loading="lazy" className="size-full object-cover transition-transform duration-[900ms] ease-soft group-hover:scale-105" />
+                <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-espresso/85 to-transparent px-2 pb-2 pt-[18px] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-cream sm:px-4 sm:pb-3 sm:pt-[26px] sm:text-[0.8rem]">{label}</figcaption>
+              </figure>
             ))}
           </div>
-          <ol className="proc-grid">
+          <ol className="m-0 grid list-none gap-3 p-0 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {processSteps.map((st, n) => (
-              <li key={st.step} className="proc">
-                <span className="proc-num num">{String(n + 1).padStart(2, '0')}</span>
-                <h3>{st.step}</h3>
-                <p>{st.desc}</p>
+              <li key={st.step} className="flex gap-4 rounded-xl border border-champagne/20 bg-cream/5 p-5 transition-colors duration-300 hover:border-champagne/50 hover:bg-cream/[0.09]">
+                <span className="font-display text-[1.6rem] leading-none tabular-nums text-champagne">{String(n + 1).padStart(2, '0')}</span>
+                <div>
+                  <h3 className="mb-1 text-[1.05rem] text-cream">{st.step}</h3>
+                  <p className="text-[0.86rem] leading-relaxed text-cream/70">{st.desc}</p>
+                </div>
               </li>
             ))}
           </ol>
-          <ul className="proc-certs">
-            {certifications.map((c) => <li key={c}><FiCheck size={15} />{c}</li>)}
+          <ul className="m-0 mt-7 flex list-none flex-wrap justify-center gap-x-3 gap-y-2.5 p-0">
+            {certifications.map((c) => (
+              <li key={c} className="inline-flex items-center gap-2 rounded-full border border-champagne/20 px-4 py-2 text-[0.8rem] text-cream"><FiCheck size={15} className="flex-none text-champagne" />{c}</li>
+            ))}
           </ul>
-          <div className="center-row"><Link to="/factory" className="btn btn-primary btn-lg">See our full process</Link></div>
-        </div>
-      </Reveal>
-    ),
-
-    factorySpotlight: (
-      <Reveal as="section" className="section home-band home-factory">
-        <div className="container">
-          <div className="factory-grid">
-            <div className="factory-copy">
-              <p className="home-eyebrow">Inside Our Hair Factory</p>
-              <SectionHeading title="From Selection to Export, Every Detail Matters" rule />
-              <p className="factory-lede">See how selected Indian hair is sorted, processed, checked and prepared for customers and wholesale buyers.</p>
-              <div className="factory-points">
-                <span><FiCheck size={15} /> Careful hair selection</span>
-                <span><FiCheck size={15} /> Professional processing</span>
-                <span><FiCheck size={15} /> Export-ready packaging</span>
-              </div>
-              <Link to="/factory" className="btn btn-primary btn-lg">Explore Factory <FiArrowRight size={16} /></Link>
-            </div>
-            <div className="factory-gallery">
-              {factoryPhotos.map(([src, label], i) => (
-                <figure className={i === 0 ? 'is-lead' : ''} key={label}>
-                  <img src={src} alt={label} loading="lazy" />
-                  <figcaption>{label}</figcaption>
-                </figure>
-              ))}
-            </div>
-          </div>
-        </div>
+          <div className="mt-7 flex justify-center"><Link to="/factory" className={btn('primary', 'lg')}>See our full process</Link></div>
+        </Container>
       </Reveal>
     ),
 
     seasonalOffers: seasonal.length > 0 && (
-      <section className="section section--tight">
-        <div className="container">
+      <Reveal as="section" className={BAND}>
+        <Container>
           <SectionHeading title="Seasonal Offers" rule />
-          <div className="seasonal-row">
+          <div className="grid grid-cols-2 gap-3.5 md:grid-cols-4">
             {seasonal.map((b, i) => <PromoTile key={b.id} banner={b} fallback={FALLBACK_SEASONAL[i % FALLBACK_SEASONAL.length]} variant="seasonal" />)}
           </div>
-        </div>
-      </section>
+        </Container>
+      </Reveal>
     ),
 
     specialOffers: (specialBanners.length > 0 || showCoupon) && (
-      <section className="section section--tight" id="offers">
-        <div className="container">
-          <SectionHeading title="Special Offers" sub="Limited-time deals on our most popular hair." rule />
-          {showCoupon && <CouponBanner coupon={coupon} image={catRaw} />}
-          {specialBanners.length > 0 && (
-            <div className="special-row special-row--gap">
-              {specialBanners.map((b, i) => <PromoTile key={b.id} banner={b} fallback={FALLBACK_SPECIAL[i % FALLBACK_SPECIAL.length]} variant="special" />)}
-            </div>
-          )}
+      <Reveal as="section" className={BAND}>
+        <div id="offers" className="scroll-mt-28">
+          <Container>
+            <SectionHeading title="Special Offers" sub="Limited-time deals on our most popular hair." rule />
+            {showCoupon && <CouponBanner coupon={coupon} image={catRaw} />}
+            {specialBanners.length > 0 && (
+              <div className="mt-[18px] grid grid-cols-2 gap-3.5 md:grid-cols-4">
+                {specialBanners.map((b, i) => <PromoTile key={b.id} banner={b} fallback={FALLBACK_SPECIAL[i % FALLBACK_SPECIAL.length]} variant="special" />)}
+              </div>
+            )}
+          </Container>
         </div>
-      </section>
+      </Reveal>
     ),
 
     beforeAfter: (beforeAfter.length > 0 || tryOn) && (
-      <section className="section section--tight">
-        <div className="container ba-grid">
+      <Reveal as="section" className={BAND_WHITE}>
+        <Container className={cx('grid items-start gap-[clamp(16px,3vw,32px)]', beforeAfter.length > 0 && tryOn && 'md:grid-cols-2')}>
           {beforeAfter.length > 0 && (
-            <div className="ba-col">
+            <div>
               <SectionHeading title="Before & After" />
-              <div className="ba-card">
-                <figure><img src={imageOr(beforeAfter[0].beforeImage)} alt="Before" loading="lazy" /><figcaption>Before</figcaption></figure>
-                <figure><img src={imageOr(beforeAfter[0].afterImage)} alt="After" loading="lazy" /><figcaption>After</figcaption></figure>
+              <div className="grid grid-cols-2 gap-1 overflow-hidden rounded-xl border border-line">
+                {[['Before', beforeAfter[0].beforeImage], ['After', beforeAfter[0].afterImage]].map(([label, image]) => (
+                  <figure key={label} className="relative m-0 aspect-[4/3] bg-sand">
+                    <img src={imageOr(image)} alt={label} loading="lazy" className="size-full object-cover" />
+                    <figcaption className="absolute bottom-2.5 left-2.5 rounded-sm bg-espresso/85 px-2.5 py-[3px] text-[0.68rem] font-bold uppercase tracking-[0.1em] text-white">{label}</figcaption>
+                  </figure>
+                ))}
               </div>
               {(beforeAfter[0].title || beforeAfter[0].tag) && (
-                <p className="ba-cap"><strong>{beforeAfter[0].title}</strong>{beforeAfter[0].tag && <span> · {beforeAfter[0].tag}</span>}</p>
+                <p className="mt-2.5 text-[0.86rem] text-muted"><strong className="font-semibold text-espresso">{beforeAfter[0].title}</strong>{beforeAfter[0].tag && <span> · {beforeAfter[0].tag}</span>}</p>
               )}
             </div>
           )}
           {tryOn && (
-            <div className="ba-col">
+            <div>
               <SectionHeading title={tryOn.title || 'Virtual Try-On'} />
               <PromoTile banner={{ ...tryOn, title: '' }} fallback={heroModel} variant="tryon" />
             </div>
           )}
-        </div>
-      </section>
+        </Container>
+      </Reveal>
     ),
 
     careGuide: guides.length > 0 && (
-      <Reveal as="section" className="section section--tight">
-        <div className="container">
+      <Reveal as="section" className={BAND}>
+        <Container>
           <SectionHeading title="Hair Care Guide" sub="Tips from our journal on caring for your hair." rule action={{ to: '/journal', label: 'View all' }} />
-          <div className="care-row">
-            {guides.map((g, i) => (
-              <Link to={`/journal/${g.id}`} className="care" key={g.id}>
-                <span className="care-img"><img src={imageOr(g.img, FALLBACK_BLOG[i % FALLBACK_BLOG.length])} alt="" loading="lazy" /></span>
-                <strong className="care-title">{g.title}</strong>
-                {g.excerpt && <span className="care-ex">{g.excerpt}</span>}
-              </Link>
-            ))}
+          <div className={cx('grid gap-4 sm:gap-5', guides.length > 1 && 'lg:grid-cols-[1.1fr_1fr]')}>
+            {/* Lead article */}
+            <Link to={`/journal/${guides[0].id}`} className="group relative block min-h-[300px] overflow-hidden rounded-xl bg-espresso sm:min-h-[360px]">
+              <img src={imageOr(guides[0].img, FALLBACK_BLOG[0])} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition-transform duration-[900ms] ease-soft group-hover:scale-[1.05]" />
+              <span className="absolute inset-0 bg-gradient-to-t from-espresso/90 via-espresso/35 to-transparent" />
+              <span className="absolute inset-x-0 bottom-0 block p-5 sm:p-7">
+                <span className="mb-2.5 inline-block rounded-full bg-champagne px-3 py-1 text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-espresso">Latest</span>
+                <strong className="block max-w-[28ch] font-display text-[clamp(1.35rem,2.4vw,1.85rem)] font-normal leading-tight text-cream">{guides[0].title}</strong>
+                {guides[0].excerpt && <span className="mt-2 line-clamp-2 block max-w-[52ch] text-[0.9rem] leading-relaxed text-cream/75">{guides[0].excerpt}</span>}
+                <span className="mt-3.5 inline-flex items-center gap-1.5 text-[0.85rem] font-semibold text-champagne">Read article <FiArrowRight size={15} className="transition-transform duration-300 group-hover:translate-x-1" /></span>
+              </span>
+            </Link>
+
+            {/* More articles */}
+            {guides.length > 1 && (
+              <ul className="m-0 grid list-none content-start gap-3 p-0 sm:gap-4">
+                {guides.slice(1).map((g, i) => (
+                  <li key={g.id}>
+                    <Link to={`/journal/${g.id}`} className="group flex gap-4 rounded-xl border border-line bg-white p-3 transition duration-300 hover:border-brand hover:shadow-[0_12px_26px_-18px_rgb(30_20_16/0.4)]">
+                      <span className="block aspect-[4/3] w-[104px] flex-none overflow-hidden rounded-lg bg-sand sm:w-[140px]">
+                        <img src={imageOr(g.img, FALLBACK_BLOG[(i + 1) % FALLBACK_BLOG.length])} alt="" loading="lazy" className="size-full object-cover transition-transform duration-[800ms] ease-soft group-hover:scale-105" />
+                      </span>
+                      <span className="flex min-w-0 flex-col justify-center gap-1">
+                        <strong className="line-clamp-2 text-[0.95rem] font-semibold leading-snug text-espresso transition-colors group-hover:text-brand">{g.title}</strong>
+                        {g.excerpt && <span className="line-clamp-2 text-[0.82rem] leading-relaxed text-muted">{g.excerpt}</span>}
+                        <span className="mt-0.5 inline-flex items-center gap-1 text-[0.78rem] font-semibold text-brand">Read more <FiArrowRight size={13} /></span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-        </div>
+        </Container>
       </Reveal>
     ),
 
     testimonials: testimonials.length > 0 && (
-      <Reveal as="section" className="section section--tight">
-        <div className="container">
+      <Reveal as="section" className={BAND_SAND}>
+        <Container>
           <SectionHeading title="Customer Reviews" sub="What our customers say about us." rule />
-          <div className="testi-grid">
+          <div className="grid gap-4 md:grid-cols-3">
             {testimonials.slice(0, 3).map((t, i) => (
-              <figure className="testi" key={t.id || i}>
+              <figure className="m-0 flex flex-col gap-3 rounded-xl border border-line bg-white p-6" key={t.id || i}>
+                <span aria-hidden="true" className="font-display text-5xl leading-none text-gold/60">“</span>
                 {t.rating > 0 && <StarRating value={t.rating} size={15} />}
-                <blockquote>{t.quote || t.message || t.text}</blockquote>
+                <blockquote className="m-0 flex-1 text-[0.92rem] leading-relaxed text-ink">{t.quote || t.message || t.text}</blockquote>
                 <figcaption>
-                  <strong>{t.name}</strong>
-                  {(t.country || t.location || t.role) && <span>{t.country || t.location || t.role}</span>}
+                  <strong className="block text-[0.9rem] text-espresso">{t.name}</strong>
+                  {(t.country || t.location || t.role) && <span className="text-[0.8rem] text-muted">{t.country || t.location || t.role}</span>}
                 </figcaption>
               </figure>
             ))}
           </div>
-        </div>
+        </Container>
       </Reveal>
     ),
 
-
-    wholesale: (
-      <Reveal as="section" className="section section--tight">
-        <div className="container">
-          <div className="wholesale-hero">
-            <img src={factoryExport} alt="Indian hair export packaging" loading="lazy" />
-            <div className="wholesale-shade" />
-            <div className="wholesale-copy">
-              <p className="home-eyebrow home-eyebrow--gold">For Salons, Brands & Distributors</p>
-              <h2>Build Your Hair Business with Indian Hair</h2>
-              <p>Looking for bulk quantities, repeat supply or custom requirements? Send us your requirements and talk to our wholesale team.</p>
-              <div className="export-ctas">
-                <Link to="/wholesale" className="btn btn-primary btn-lg">Request Wholesale Quote <FiArrowRight size={16} /></Link>
-                <Link to="/contact" className="btn btn-lg btn-outline-light">Contact Export Team</Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Reveal>
-    ),
-
+    // Light card (not another dark block): keeps the dark newsletter + footer at the bottom distinct.
     exportBand: (
-      <Reveal as="section" className="section section--tight">
-        <div className="container">
-          <div className="export">
-            <div className="export-copy">
-              <p className="home-eyebrow home-eyebrow--gold">Wholesale &amp; Export</p>
-              <h2>Exporting Indian temple hair worldwide</h2>
-              <p>Buying in bulk for a salon, brand or distribution business? Tell us what you need and our team will get back to you with wholesale details.</p>
-              <div className="export-ctas">
-                <Link to="/wholesale" className="btn btn-primary btn-lg">Wholesale enquiry <FiArrowRight size={16} /></Link>
-                <Link to="/contact" className="btn btn-lg btn-outline-light">Talk to us</Link>
+      <Reveal as="section" className={BAND}>
+        <Container>
+          <div className="grid items-center gap-[clamp(24px,5vw,64px)] rounded-2xl border border-line bg-white p-[clamp(24px,5vw,56px)] shadow-soft lg:grid-cols-[1.1fr_.9fr]">
+            <div>
+              <p className={cx(eyebrow, 'mb-2.5')}>Wholesale &amp; Export</p>
+              <h2 className="max-w-[20ch] text-[clamp(1.6rem,3vw,2.3rem)] text-espresso">Exporting Indian temple hair worldwide</h2>
+              <p className="mt-3.5 max-w-[46ch] leading-relaxed text-muted">Buying in bulk for a salon, brand or distribution business? Tell us what you need and our team will get back to you with wholesale details.</p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link to="/wholesale" className={btn('primary', 'lg')}>Wholesale enquiry <FiArrowRight size={16} /></Link>
+                <Link to="/contact" className="inline-flex min-h-12 items-center justify-center rounded-md border border-line-strong px-6 text-[0.9rem] font-semibold text-espresso transition hover:border-espresso hover:bg-sand">Talk to us</Link>
               </div>
             </div>
-            <div className="export-list">
-              <p className="export-label">We ship to customers in</p>
-              <ul>{exportCountries.map((c) => <li key={c}>{c}</li>)}</ul>
+            <div>
+              <p className="mb-3.5 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-brand">We ship to customers in</p>
+              <ul className="m-0 flex list-none flex-wrap gap-2.5 p-0">
+                {exportCountries.map((c) => <li key={c} className="rounded-full border border-line bg-sand px-4 py-2 text-[0.84rem] text-espresso">{c}</li>)}
+              </ul>
             </div>
           </div>
-        </div>
-      </Reveal>
-    ),
-
-    globalExport: (
-      <Reveal as="section" className="section home-global">
-        <div className="container">
-          <div className="global-card">
-            <div className="global-visual">
-              <img src={heroModel} alt="Indian hair export" loading="lazy" />
-              <div className="global-glow" />
-              <div className="global-route global-route--one">India <FiArrowRight size={14} /> Worldwide</div>
-              <div className="global-route global-route--two">Wholesale • Retail • Salon</div>
-            </div>
-            <div className="global-copy">
-              <p className="home-eyebrow">Global Export</p>
-              <SectionHeading title="Indian Hair, Prepared for Worldwide Buyers" rule />
-              <p>Explore our export-ready collections and connect with the team for product availability, quantities and shipping requirements.</p>
-              <div className="country-pills">
-                {exportCountries.slice(0, 8).map((country) => <span key={country}>{country}</span>)}
-              </div>
-              <Link to="/contact" className="btn btn-primary btn-lg">Start an Enquiry <FiArrowRight size={16} /></Link>
-            </div>
-          </div>
-        </div>
+        </Container>
       </Reveal>
     ),
 
     instagram: instaImages.length > 0 && (
-      <Reveal as="section" className="section section--tight">
-        <div className="container">
+      <Reveal as="section" className={cx(BAND, 'pt-0 sm:pt-0 lg:pt-0')}>
+        <Container>
           <SectionHeading title="Follow Us on Instagram" sub={sc?.instagram?.handle} />
-          <div className="gallery">
-            {instaImages.slice(0, 6).map((img, i) => (
-              instaUrl ? (
-                <a href={instaUrl} target="_blank" rel="noopener noreferrer" key={i} aria-label={`Open Instagram, photo ${i + 1}`}>
-                  <img src={img} alt="" loading="lazy" />
-                </a>
+          <div className="grid grid-cols-3 gap-2.5 md:grid-cols-6">
+            {instaImages.slice(0, 6).map((img, i) => {
+              const tile = 'block aspect-square overflow-hidden rounded-lg bg-sand';
+              const pic = <img src={img} alt="" loading="lazy" className="size-full object-cover transition-transform duration-[800ms] ease-soft group-hover:scale-[1.07]" />;
+              return instaUrl ? (
+                <a href={instaUrl} target="_blank" rel="noopener noreferrer" key={i} aria-label={`Open Instagram, photo ${i + 1}`} className={`group ${tile}`}>{pic}</a>
               ) : (
-                <span key={i}><img src={img} alt="" loading="lazy" /></span>
-              )
-            ))}
+                <span key={i} className={`group ${tile}`}>{pic}</span>
+              );
+            })}
           </div>
-        </div>
+        </Container>
       </Reveal>
     ),
   };
@@ -584,23 +578,26 @@ export default function Home() {
   return (
     <>
       {/* ================= HERO ================= */}
-      {scLoading ? <section className="hero hero--loading" aria-hidden="true" /> : <HeroSlider slides={slides} />}
+      {scLoading
+        ? <section className="min-h-[clamp(400px,46vw,640px)] bg-espresso" aria-hidden="true" />
+        : <HeroSlider slides={slides} />}
 
       {/* ================= TRUST STRIP ================= */}
-      <div className="container home-trust"><TrustBadges /></div>
+      <Container className="relative z-[2] -mt-8 pb-2"><TrustBadges variant="strip" /></Container>
 
       {/* ================= ORDERED SECTIONS ================= */}
-      {keys.map((k) => (enabled(k) && sections[k] ? <div key={k} className="home-sec">{sections[k]}</div> : null))}
+      {keys.map((k) => (enabled(k) && sections[k] ? <Fragment key={k}>{sections[k]}</Fragment> : null))}
 
       {recentlyViewed.length > 0 && <RecentlyViewed items={recentlyViewed} />}
 
       {/* ================= NEWSLETTER ================= */}
-      <section className="news">
-        <div className="container news-inner">
-          <h2>{news.title || 'Join the list'}</h2>
-          <p>{news.description || 'New arrivals, styling edits and offers, straight to your inbox.'}</p>
-          <NewsletterForm />
-        </div>
+      <section className="on-dark relative overflow-hidden bg-espresso text-cream">
+        <div className="pointer-events-none absolute -bottom-40 left-1/2 h-[560px] w-[420px] -translate-x-1/2 rounded-t-full border border-champagne/20" />
+        <Container className="relative flex flex-col items-center py-12 text-center sm:py-16 lg:py-20">
+          <h2 className="text-[clamp(1.7rem,3vw,2.4rem)] text-cream">{news.title || 'Join the list'}</h2>
+          <p className="mx-auto mb-7 mt-3 text-cream/70">{news.description || 'New arrivals, styling edits and offers, straight to your inbox.'}</p>
+          <div className="w-[min(100%,520px)]"><NewsletterForm /></div>
+        </Container>
       </section>
 
       <QuickView product={quickViewProduct} onClose={() => setQuickViewProduct(null)} />

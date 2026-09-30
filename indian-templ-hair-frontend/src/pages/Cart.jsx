@@ -9,6 +9,12 @@ import { useStore } from '../context/StoreContext';
 import { useProducts } from '../hooks/useStoreData';
 import { rupee } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
+import Container from '../components/Container';
+import Section from '../components/Section';
+import PageTitle from '../components/PageTitle';
+import { SummaryCard, SummaryRows, SummaryTotal } from '../components/SummaryCard';
+import { FormAlert } from '../components/Field';
+import { cx, linkU } from '../lib/ui';
 
 const FREE_SHIPPING_OVER = 15000;
 
@@ -39,14 +45,14 @@ export default function Cart() {
     }
   }
 
+  const freePct = Math.min(100, Math.round((cartSubtotal / FREE_SHIPPING_OVER) * 100));
+
   return (
     <>
-      <div className="container page-title-row">
-        <h1 className="page-title">Your Cart <small>({cart.length} item{cart.length !== 1 ? 's' : ''})</small></h1>
-      </div>
+      <PageTitle count={`(${cart.length} item${cart.length !== 1 ? 's' : ''})`}>Your Cart</PageTitle>
 
-      <div className="section section--tight">
-        <div className="container">
+      <Section tight>
+        <Container>
           {cart.length === 0 ? (
             <EmptyState
               icon={<FiShoppingBag size={26} />}
@@ -55,105 +61,113 @@ export default function Cart() {
               action={<Button to="/shop">Start shopping</Button>}
             />
           ) : (
-            <div className="cart-grid">
+            <div className="grid items-start gap-[clamp(28px,4vw,56px)] lg:grid-cols-[minmax(0,1fr)_390px]">
               {/* ===================== CART ITEMS ===================== */}
               <div>
-                <ul className="cart-list">
+                {/* free-shipping progress */}
+                <div className="mb-5 rounded-lg border border-line bg-white px-5 py-4">
+                  <p className="m-0 flex items-center gap-2 text-[0.88rem] text-espresso">
+                    <FiTruck size={16} className="text-gold" aria-hidden="true" />
+                    {toFree > 0 ? <>Add <strong className="tabular-nums">{rupee(toFree)}</strong> more for free shipping.</> : <strong className="text-ok">You've unlocked free shipping!</strong>}
+                  </p>
+                  <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-sand" role="progressbar" aria-valuenow={freePct} aria-valuemin={0} aria-valuemax={100}>
+                    <div className="h-full rounded-full bg-gradient-to-r from-gold to-brand transition-[width] duration-500" style={{ width: `${freePct}%` }} />
+                  </div>
+                </div>
+
+                <ul className="m-0 list-none border-t border-espresso p-0">
                   {cart.map((item) => (
-                    <li key={item.id} className="cart-item">
-                      <Link to={`/product/${item.id}`} className="cart-thumb" aria-label={item.name}>
+                    <li key={item.id} className="grid grid-cols-[88px_minmax(0,1fr)] items-start gap-4 border-b border-line py-6 sm:grid-cols-[118px_minmax(0,1fr)_auto] sm:gap-[22px]">
+                      <Link to={`/product/${item.id}`} className="flex aspect-[4/5] items-center justify-center overflow-hidden rounded-md bg-sand text-walnut" aria-label={item.name}>
                         {item.image ? (
-                          <img src={resolveImageUrl(item.image)} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                          <img className="size-full object-cover" src={resolveImageUrl(item.image)} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                         ) : (
                           <FiShoppingBag size={26} />
                         )}
                       </Link>
 
-                      <div className="cart-info">
-                        <h3><Link to={`/product/${item.id}`}>{item.name}</Link></h3>
-                        <p className="cart-meta">
+                      <div className="min-w-0">
+                        <h3 className="mb-2 text-[1.2rem]"><Link to={`/product/${item.id}`} className="hover:text-walnut">{item.name}</Link></h3>
+                        <p className="m-0 mb-[18px] flex flex-wrap gap-x-4 gap-y-1 text-[0.86rem] text-muted">
                           {item.hairType && <span>{item.hairType}</span>}
                           {item.texture && item.texture !== item.hairType && <span>{item.texture}</span>}
                           {item.laceType && <span>{item.laceType}</span>}
                           {item.length && <span>Length {item.length}"</span>}
                           {item.color && <span>{item.color}</span>}
                         </p>
-                        <div className="cart-controls">
-                          <div className="qty qty--sm" role="group" aria-label={`Quantity for ${item.name}`}>
-                            <button type="button" onClick={() => updateQty(item.id, item.qty - 1)} aria-label="Decrease quantity"><FiMinus size={14} /></button>
-                            <span className="qty-n" aria-live="polite">{item.qty}</span>
-                            <button type="button" onClick={() => updateQty(item.id, item.qty + 1)} aria-label="Increase quantity"><FiPlus size={14} /></button>
+                        <div className="flex flex-wrap items-center gap-x-[22px] gap-y-3.5">
+                          <div className="inline-flex items-center rounded-md border border-line-strong bg-white" role="group" aria-label={`Quantity for ${item.name}`}>
+                            <button type="button" className="inline-flex h-9 w-[34px] items-center justify-center text-espresso transition-colors hover:bg-sand" onClick={() => updateQty(item.id, item.qty - 1)} aria-label="Decrease quantity"><FiMinus size={14} /></button>
+                            <span className="min-w-10 text-center font-semibold tabular-nums" aria-live="polite">{item.qty}</span>
+                            <button type="button" className="inline-flex h-9 w-[34px] items-center justify-center text-espresso transition-colors hover:bg-sand" onClick={() => updateQty(item.id, item.qty + 1)} aria-label="Increase quantity"><FiPlus size={14} /></button>
                           </div>
-                          <button type="button" className="cart-remove" onClick={() => removeFromCart(item.id)}>
+                          <button type="button" className="inline-flex items-center gap-1.5 border-0 bg-transparent text-[0.84rem] text-muted transition-colors hover:text-sale" onClick={() => removeFromCart(item.id)}>
                             <FiTrash2 size={14} aria-hidden="true" /> Remove
                           </button>
                         </div>
                       </div>
 
-                      <div className="cart-line price">
-                        <strong>{rupee(item.price * item.qty)}</strong>
-                        {item.mrp > item.price && <s>{rupee(item.mrp * item.qty)}</s>}
+                      <div className="col-start-2 flex items-baseline gap-2.5 tabular-nums sm:col-start-auto sm:flex-col sm:items-end sm:gap-0.5 sm:text-right">
+                        <strong className="text-[1.1rem] text-espresso">{rupee(item.price * item.qty)}</strong>
+                        {item.mrp > item.price && <s className="text-[0.84rem] text-muted">{rupee(item.mrp * item.qty)}</s>}
                       </div>
                     </li>
                   ))}
                 </ul>
 
-                <Link to="/shop" className="cart-continue"><FiArrowLeft size={15} aria-hidden="true" /> Continue shopping</Link>
+                <Link to="/shop" className="mt-[26px] inline-flex items-center gap-2 text-[0.9rem] font-semibold text-walnut hover:text-espresso"><FiArrowLeft size={15} aria-hidden="true" /> Continue shopping</Link>
               </div>
 
               {/* ===================== ORDER SUMMARY ===================== */}
-              <aside className="summary" aria-label="Order summary">
-                <h2>Order Summary</h2>
-
-                <p className="coupon-label">Have a coupon?</p>
-                <div className="coupon">
+              <SummaryCard title="Order Summary" aria-label="Order summary">
+                <p className="mb-2 text-[0.8rem] font-semibold text-espresso">Have a coupon?</p>
+                <div className="flex items-center gap-2 rounded-md border border-line-strong bg-cream py-[5px] pl-3.5 pr-[5px] text-walnut transition focus-within:border-walnut focus-within:ring-4 focus-within:ring-gold/30">
                   <label htmlFor="coupon" className="sr-only">Coupon code</label>
                   <FiTag size={16} aria-hidden="true" />
-                  <input id="coupon" placeholder="Coupon code" value={coupon} onChange={(e) => setCoupon(e.target.value)} autoComplete="off" />
-                  <button type="button" className="btn btn-dark btn-sm" onClick={handleApply} disabled={applying}>{applying ? 'Checking…' : 'Apply'}</button>
+                  <input id="coupon" placeholder="Coupon code" value={coupon} onChange={(e) => setCoupon(e.target.value)} autoComplete="off" className="min-w-0 flex-1 border-0 bg-transparent py-2 text-ink outline-none" />
+                  <Button variant="dark" size="sm" onClick={handleApply} disabled={applying}>{applying ? 'Checking…' : 'Apply'}</Button>
                 </div>
 
                 {appliedCoupon && (
-                  <p className="form-alert form-alert-ok coupon-ok">
+                  <FormAlert kind="ok" className="mt-3 flex items-center justify-between gap-2.5">
                     <span>{appliedCoupon.code} applied, you save {rupee(appliedCoupon.discount)}</span>
-                    <button type="button" className="link-u" onClick={() => { clearCoupon(); setCoupon(''); }}>Remove</button>
-                  </p>
+                    <button type="button" className={cx(linkU, 'border-0 bg-transparent')} onClick={() => { clearCoupon(); setCoupon(''); }}>Remove</button>
+                  </FormAlert>
                 )}
 
-                <dl className="sum-rows price">
-                  <div><dt>Subtotal</dt><dd>{rupee(cartSubtotal)}</dd></div>
-                  {discount > 0 && <div className="is-save"><dt>Discount on MRP</dt><dd>−{rupee(discount)}</dd></div>}
-                  {appliedCoupon && <div className="is-save"><dt>Coupon ({appliedCoupon.code})</dt><dd>−{rupee(couponDiscount)}</dd></div>}
-                  <div><dt>Shipping</dt><dd>{shipping === 0 ? 'Free' : rupee(shipping)}</dd></div>
-                </dl>
+                <SummaryRows className="mt-5 border-t border-line pt-[18px]" rows={[
+                  { label: 'Subtotal', value: rupee(cartSubtotal) },
+                  discount > 0 && { label: 'Discount on MRP', value: `−${rupee(discount)}`, save: true },
+                  appliedCoupon && { label: `Coupon (${appliedCoupon.code})`, value: `−${rupee(couponDiscount)}`, save: true },
+                  { label: 'Shipping', value: shipping === 0 ? 'Free' : rupee(shipping) },
+                ]} />
 
-                {toFree > 0 && <p className="sum-hint">Add {rupee(toFree)} more for free shipping.</p>}
+                {toFree > 0 && <p className="mt-3.5 rounded-md bg-gold-soft px-3 py-2.5 text-[0.84rem] text-espresso">Add {rupee(toFree)} more for free shipping.</p>}
 
-                <div className="sum-total price">
-                  <span>Total</span>
-                  <strong>{rupee(total)}</strong>
-                </div>
+                <SummaryTotal>{rupee(total)}</SummaryTotal>
 
                 <Button size="lg" block onClick={() => navigate('/checkout')}>Proceed to Checkout</Button>
 
-                <ul className="sum-trust">
-                  <li><FiLock size={16} aria-hidden="true" /><span>Secure<br />checkout</span></li>
-                  <li><FiTruck size={16} aria-hidden="true" /><span>24 hrs<br />from Delhi</span></li>
-                  <li><FiRefreshCw size={16} aria-hidden="true" /><span>7-day<br />returns</span></li>
+                <ul className="m-0 mt-[22px] grid list-none grid-cols-3 gap-2 border-t border-line p-0 pt-[18px] text-center">
+                  {[[FiLock, 'Secure', 'checkout'], [FiTruck, '24 hrs', 'from Delhi'], [FiRefreshCw, '7-day', 'returns']].map(([Icon, a, b]) => (
+                    <li key={a} className="flex flex-col items-center gap-1.5 text-[0.74rem] leading-snug text-muted">
+                      <Icon size={16} className="text-gold" aria-hidden="true" /><span>{a}<br />{b}</span>
+                    </li>
+                  ))}
                 </ul>
-              </aside>
+              </SummaryCard>
             </div>
           )}
-        </div>
-      </div>
+        </Container>
+      </Section>
 
       {alsoLike.length > 0 && (
-        <section className="section section--tight">
-          <div className="container">
+        <Section tight>
+          <Container>
             <SectionHeading title="You may also like" />
             <ProductCarousel products={alsoLike} label="You may also like" />
-          </div>
-        </section>
+          </Container>
+        </Section>
       )}
     </>
   );

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSiteContent } from '../hooks/useStoreData';
 import BadgeIcon from './BadgeIcon';
+import Container from './Container';
 
 // Fallbacks only when the admin has not added announcements (Website Content → Header).
 // The threshold matches the shipping charge rule in the order service.
@@ -24,14 +25,16 @@ export default function AnnouncementBar() {
   }, [messages.length]);
 
   return (
-    <div className="ann">
-      <div className="container ann-inner">
-        <ul className="ann-row">
+    <div className="on-dark h-10 bg-espresso text-[0.78rem] tracking-[0.03em] text-cream">
+      <Container className="flex h-full items-center justify-center">
+        <ul className="m-0 hidden w-full list-none items-center justify-between gap-6 p-0 lg:flex">
           {messages.map((m) => (
-            <li key={m}><BadgeIcon label={m} size={15} /><span>{m}</span></li>
+            <li key={m} className="inline-flex items-center gap-2 whitespace-nowrap font-medium text-champagne first:only:mx-auto">
+              <BadgeIcon label={m} size={15} /><span>{m}</span>
+            </li>
           ))}
         </ul>
-        <p className="ann-msg" aria-live="polite">
+        <p className="m-0 max-w-none truncate text-center font-medium text-champagne lg:hidden" aria-live="polite">
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
               key={i}
@@ -42,7 +45,7 @@ export default function AnnouncementBar() {
             </motion.span>
           </AnimatePresence>
         </p>
-      </div>
+      </Container>
     </div>
   );
 }

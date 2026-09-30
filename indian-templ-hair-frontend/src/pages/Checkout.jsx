@@ -21,6 +21,12 @@ import { ordersApi, paymentsApi } from '../lib/resources';
 import { openRazorpayCheckout } from '../lib/razorpay';
 import { resolveImageUrl } from '../lib/api';
 import { useCompanyInfo } from '../hooks/useStoreData';
+import Container from '../components/Container';
+import Section from '../components/Section';
+import PageTitle from '../components/PageTitle';
+import { SummaryCard, SummaryRows, SummaryTotal } from '../components/SummaryCard';
+import { FormAlert } from '../components/Field';
+import { cx, inputCls, labelCls, errorCls } from '../lib/ui';
 
 const STEPS = [
   {
@@ -494,57 +500,66 @@ export default function Checkout() {
 
   return (
     <>
-      <div className="container page-title-row"><h1 className="page-title">Checkout</h1></div>
+      <PageTitle>Checkout</PageTitle>
 
-      <div className="section section--tight">
-        <div className="container co-grid">
-          <div className="co-main">
+      <Section tight>
+        <Container className="grid items-start gap-[clamp(28px,4vw,56px)] lg:grid-cols-[minmax(0,1fr)_390px]">
+          <div className="min-w-0">
             {/* ---------- step indicator ---------- */}
-            <ol className="steps" aria-label="Checkout progress">
-              {STEPS.map((s, i) => (
-                <li key={s.label} className={i < step ? 'is-done' : i === step ? 'is-current' : ''} aria-current={i === step ? 'step' : undefined}>
-                  <span className="steps-dot num">{i < step ? <FiCheck size={14} aria-hidden="true" /> : i + 1}</span>
-                  <span className="steps-label">{s.label}</span>
-                </li>
-              ))}
+            <ol className="m-0 mb-7 grid list-none grid-cols-4 gap-2 p-0" aria-label="Checkout progress">
+              {STEPS.map((s, i) => {
+                const done = i < step;
+                const current = i === step;
+                return (
+                  <li
+                    key={s.label} aria-current={current ? 'step' : undefined}
+                    className={cx('flex flex-col gap-2.5 border-t-2 pt-3.5', done ? 'border-espresso text-espresso' : current ? 'border-gold text-espresso' : 'border-line text-muted')}
+                  >
+                    <span className={cx('inline-flex size-7 items-center justify-center rounded-full border text-[0.82rem] font-semibold tabular-nums', done ? 'border-espresso bg-espresso text-champagne' : current ? 'border-gold bg-gold text-espresso' : 'border-current')}>
+                      {done ? <FiCheck size={14} aria-hidden="true" /> : i + 1}
+                    </span>
+                    <span className="text-[0.66rem] font-semibold tracking-[0.04em] sm:text-[0.74rem]">{s.label}</span>
+                  </li>
+                );
+              })}
             </ol>
 
-            <section className="co-card" aria-labelledby="co-title">
-              <h2 id="co-title" className="co-title">{stepTitle}</h2>
+            <section className="rounded-xl border border-line bg-white p-[clamp(22px,3.2vw,36px)] shadow-soft" aria-labelledby="co-title">
+              <h2 id="co-title" className="mb-6 text-[1.6rem]">{stepTitle}</h2>
 
               {/* ================= STEP 0: ADDRESS ================= */}
               {step === 0 && (
-                <div className="co-body">
+                <div className="grid gap-[22px]">
                   {!user && (
-                    <div className="seg" role="group" aria-label="Checkout type">
-                      <button type="button" className="is-on" aria-pressed="true">Guest checkout</button>
-                      <button type="button" aria-pressed="false" onClick={() => navigate('/login', { state: { from: '/checkout' } })}>Sign in instead</button>
+                    <div className="grid grid-cols-2 gap-1 rounded-md bg-sand p-1" role="group" aria-label="Checkout type">
+                      <button type="button" className="min-h-[42px] rounded-sm bg-white text-[0.88rem] font-semibold text-espresso shadow-soft" aria-pressed="true">Guest checkout</button>
+                      <button type="button" className="min-h-[42px] rounded-sm text-[0.88rem] font-semibold text-muted transition-colors hover:text-espresso" aria-pressed="false" onClick={() => navigate('/login', { state: { from: '/checkout' } })}>Sign in instead</button>
                     </div>
                   )}
 
                   {savedAddresses.length > 0 && (
-                    <div className="co-saved">
-                      <h3 className="co-sub">Saved address{savedAddresses.length > 1 ? 'es' : ''}</h3>
-                      <div className="co-options" role="radiogroup" aria-label="Saved addresses">
+                    <div>
+                      <h3 className="mb-3 font-sans text-[0.72rem] font-bold uppercase tracking-[0.14em] text-walnut">Saved address{savedAddresses.length > 1 ? 'es' : ''}</h3>
+                      <div className="grid gap-3" role="radiogroup" aria-label="Saved addresses">
                         {savedAddresses.map((saved) => {
                           const id = saved.id || saved._id || 'default';
                           const isSelected = selectedSavedId === id && !showNewForm;
                           return (
-                            <button key={id} type="button" role="radio" aria-checked={isSelected} className={`opt ${isSelected ? 'is-on' : ''}`} onClick={() => applySavedAddress(saved)}>
-                              <span className="opt-icon"><FiMapPin size={16} aria-hidden="true" /></span>
-                              <span className="opt-text">
-                                <strong>{saved.fullName || user?.name || 'Saved address'}</strong>
-                                <span>{saved.line1 || saved.address1}, {saved.city} {saved.pincode || saved.zip}</span>
+                            <button key={id} type="button" role="radio" aria-checked={isSelected} className={optCls(isSelected)} onClick={() => applySavedAddress(saved)}>
+                              <OptIcon on={isSelected}><FiMapPin size={16} aria-hidden="true" /></OptIcon>
+                              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                <strong className="font-semibold text-espresso">{saved.fullName || user?.name || 'Saved address'}</strong>
+                                <span className="text-[0.85rem] text-muted">{saved.line1 || saved.address1}, {saved.city} {saved.pincode || saved.zip}</span>
                               </span>
-                              {isSelected && <FiCheck size={16} className="opt-check" aria-hidden="true" />}
+                              {isSelected && <FiCheck size={16} className="flex-none text-espresso" aria-hidden="true" />}
                             </button>
                           );
                         })}
                         <button
-                          type="button" className={`opt opt-new ${showNewForm ? 'is-on' : ''}`}
+                          type="button" className={cx(optCls(showNewForm), 'justify-between border-dashed')}
                           onClick={() => { setShowNewForm(true); setSelectedSavedId(null); setAddress(emptyAddress); setFormError(''); }}
                         >
-                          <span className="opt-text"><strong>Use a new address</strong></span>
+                          <span className="flex flex-1 flex-col"><strong className="font-semibold text-espresso">Use a new address</strong></span>
                           <FiChevronRight size={16} aria-hidden="true" />
                         </button>
                       </div>
@@ -552,11 +567,11 @@ export default function Checkout() {
                   )}
 
                   {showNewForm && (
-                    <div className="form-grid">
+                    <div className="grid gap-4 sm:grid-cols-2">
                       <Field id="co-name" label="Full name" required autoComplete="name" value={address.fullName} invalid={req('fullName')} onChange={(v) => updateField('fullName', v)} />
                       <Field id="co-phone" label="Phone number" required type="tel" inputMode="tel" autoComplete="tel" value={address.phone} invalid={req('phone')} onChange={(v) => updateField('phone', v)} />
-                      <Field id="co-email" label="Email address" type="email" autoComplete="email" className="span-2" value={address.email} onChange={(v) => updateField('email', v)} />
-                      <Field id="co-line1" label="Address" required autoComplete="address-line1" className="span-2" value={address.line1} invalid={req('line1')} onChange={(v) => updateField('line1', v)} />
+                      <Field id="co-email" label="Email address" type="email" autoComplete="email" className="sm:col-span-2" value={address.email} onChange={(v) => updateField('email', v)} />
+                      <Field id="co-line1" label="Address" required autoComplete="address-line1" className="sm:col-span-2" value={address.line1} invalid={req('line1')} onChange={(v) => updateField('line1', v)} />
                       <Field id="co-city" label="City" required autoComplete="address-level2" value={address.city} invalid={req('city')} onChange={(v) => updateField('city', v)} />
                       <Field id="co-state" label="State" autoComplete="address-level1" value={address.state} onChange={(v) => updateField('state', v)} />
                       <Field id="co-pin" label="PIN code" required inputMode="numeric" autoComplete="postal-code" value={address.pincode} invalid={req('pincode')} onChange={(v) => updateField('pincode', v)} />
@@ -568,7 +583,7 @@ export default function Checkout() {
 
               {/* ================= STEP 1: SHIPPING ================= */}
               {step === 1 && (
-                <div className="co-body co-options" role="radiogroup" aria-label="Shipping method">
+                <div className="grid gap-3" role="radiogroup" aria-label="Shipping method">
                   <RadioCard
                     active={shipMethod === 'standard'} onClick={() => setShipMethod('standard')}
                     title="Standard shipping"
@@ -586,53 +601,54 @@ export default function Checkout() {
 
               {/* ================= STEP 2: PAYMENT ================= */}
               {step === 2 && (
-                <div className="co-body">
-                  <div className="co-options" role="radiogroup" aria-label="Payment method">
+                <div className="grid gap-[22px]">
+                  <div className="grid gap-3" role="radiogroup" aria-label="Payment method">
                     {PAYMENT_OPTIONS.map((option) => (
                       <RadioCard key={option.id} active={payMethod === option.id} onClick={() => setPayMethod(option.id)} title={option.title} sub={option.sub} icon={option.icon} />
                     ))}
                   </div>
-                  {payMethod !== 'cod' && (
-                    <p className="co-note">
-                      <FiLock size={16} aria-hidden="true" />
-                      <span>You will be securely redirected to Razorpay Checkout to complete your payment. Card, UPI, Netbanking and other methods shown there depend on your Razorpay account and customer's availability.</span>
-                    </p>
-                  )}
-                  {payMethod === 'cod' && (
-                    <p className="co-note">
-                      <FiPackage size={16} aria-hidden="true" />
-                      <span>Pay in cash when your order is delivered.</span>
-                    </p>
-                  )}
+                  <p className="m-0 flex max-w-none gap-3 rounded-md border border-line bg-cream px-4 py-3.5 text-[0.86rem] text-muted">
+                    {payMethod === 'cod' ? (
+                      <>
+                        <FiPackage size={16} aria-hidden="true" className="mt-0.5 flex-none text-walnut" />
+                        <span>Pay in cash when your order is delivered.</span>
+                      </>
+                    ) : (
+                      <>
+                        <FiLock size={16} aria-hidden="true" className="mt-0.5 flex-none text-walnut" />
+                        <span>You will be securely redirected to Razorpay Checkout to complete your payment. Card, UPI, Netbanking and other methods shown there depend on your Razorpay account and customer's availability.</span>
+                      </>
+                    )}
+                  </p>
                 </div>
               )}
 
               {/* ================= STEP 3: REVIEW ================= */}
               {step === 3 && (
-                <div className="co-body">
-                  <ul className="rev-items">
+                <div className="grid gap-[22px]">
+                  <ul className="m-0 list-none p-0">
                     {cart.map((item) => (
-                      <li key={item.id}>
+                      <li key={item.id} className="flex justify-between gap-4 border-b border-line py-3">
                         <span>{item.name} × {item.qty}</span>
-                        <span className="price">{rupee(item.price * item.qty)}</span>
+                        <span className="tabular-nums">{rupee(item.price * item.qty)}</span>
                       </li>
                     ))}
                   </ul>
-                  <dl className="rev-rows price">
-                    <div><dt>Subtotal</dt><dd>{rupee(cartSubtotal)}</dd></div>
-                    {appliedCoupon && <div className="is-save"><dt>Coupon ({appliedCoupon.code})</dt><dd>−{rupee(discountAmount)}</dd></div>}
-                    <div><dt>Shipping ({ship})</dt><dd>{shippingCost === 0 ? 'Free' : rupee(shippingCost)}</dd></div>
-                    <div><dt>Payment method</dt><dd>{PAYMENT_OPTIONS.find((option) => option.id === payMethod)?.title || payMethod}</dd></div>
-                    <div><dt>Deliver to</dt><dd>{address.fullName}, {address.city} {address.pincode}</dd></div>
-                    <div className="rev-total"><dt>Total</dt><dd>{rupee(total)}</dd></div>
-                  </dl>
+                  <SummaryRows rows={[
+                    { label: 'Subtotal', value: rupee(cartSubtotal) },
+                    appliedCoupon && { label: `Coupon (${appliedCoupon.code})`, value: `−${rupee(discountAmount)}`, save: true },
+                    { label: `Shipping (${ship})`, value: shippingCost === 0 ? 'Free' : rupee(shippingCost) },
+                    { label: 'Payment method', value: PAYMENT_OPTIONS.find((option) => option.id === payMethod)?.title || payMethod },
+                    { label: 'Deliver to', value: `${address.fullName}, ${address.city} ${address.pincode}` },
+                    { label: 'Total', value: rupee(total), strong: true },
+                  ]} />
                 </div>
               )}
             </section>
 
-            {formError && <p className="form-alert form-alert-error co-error" role="alert">{formError}</p>}
+            {formError && <FormAlert className="mt-[18px]">{formError}</FormAlert>}
 
-            <div className="co-nav">
+            <div className="mt-6 flex items-center justify-between gap-3">
               {step > 0 ? <Button variant="outline" onClick={previous} disabled={placing}>Back</Button> : <span />}
               <Button size="lg" onClick={next} loading={placing} disabled={placing || cart.length === 0}>
                 {placing ? 'Processing…' : step === STEPS.length - 1 ? (payMethod === 'cod' ? 'Place order' : 'Proceed to payment') : step === 1 ? 'Continue to Payment' : 'Continue'}
@@ -641,30 +657,29 @@ export default function Checkout() {
           </div>
 
           {/* ================= ORDER SUMMARY ================= */}
-          <aside className="summary co-summary" aria-label="Order summary">
-            <h2>Order summary</h2>
-            <ul className="co-lines">
+          <SummaryCard title="Order summary" className="max-lg:order-first" aria-label="Order summary">
+            <ul className="m-0 grid max-h-80 list-none gap-4 overflow-auto p-0">
               {cart.map((item) => (
-                <li key={item.id}>
-                  <span className="co-thumb">
-                    {item.image ? <img src={resolveImageUrl(item.image)} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : null}
-                    <span className="co-qty num">{item.qty}</span>
+                <li key={item.id} className="grid grid-cols-[58px_1fr_auto] items-center gap-3.5">
+                  <span className="relative aspect-[4/5] w-[58px] rounded bg-sand">
+                    {item.image ? <img className="size-full rounded object-cover" src={resolveImageUrl(item.image)} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : null}
+                    <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-espresso px-[5px] text-[0.7rem] font-semibold tabular-nums text-cream">{item.qty}</span>
                   </span>
-                  <span className="co-line-name">{item.name}</span>
-                  <span className="price co-line-price">{rupee(item.price * item.qty)}</span>
+                  <span className="text-[0.9rem] leading-snug text-ink">{item.name}</span>
+                  <span className="text-[0.92rem] font-semibold tabular-nums">{rupee(item.price * item.qty)}</span>
                 </li>
               ))}
             </ul>
-            <dl className="sum-rows price">
-              <div><dt>Subtotal</dt><dd>{rupee(cartSubtotal)}</dd></div>
-              {appliedCoupon && <div className="is-save"><dt>Coupon ({appliedCoupon.code})</dt><dd>−{rupee(discountAmount)}</dd></div>}
-              <div><dt>Shipping</dt><dd>{shippingCost === 0 ? 'Free' : rupee(shippingCost)}</dd></div>
-            </dl>
-            <div className="sum-total price"><span>Total</span><strong>{rupee(total)}</strong></div>
-            <p className="co-secure"><FiLock size={14} aria-hidden="true" /> Secure checkout</p>
-          </aside>
-        </div>
-      </div>
+            <SummaryRows className="mt-5 border-t border-line pt-[18px]" rows={[
+              { label: 'Subtotal', value: rupee(cartSubtotal) },
+              appliedCoupon && { label: `Coupon (${appliedCoupon.code})`, value: `−${rupee(discountAmount)}`, save: true },
+              { label: 'Shipping', value: shippingCost === 0 ? 'Free' : rupee(shippingCost) },
+            ]} />
+            <SummaryTotal>{rupee(total)}</SummaryTotal>
+            <p className="m-0 flex max-w-none items-center justify-center gap-2 text-[0.82rem] text-muted"><FiLock size={14} className="text-gold" aria-hidden="true" /> Secure checkout</p>
+          </SummaryCard>
+        </Container>
+      </Section>
     </>
   );
 }
@@ -672,25 +687,38 @@ export default function Checkout() {
 /* ---------- form field with visible label ---------- */
 function Field({ id, label, value, onChange, className = '', required = false, invalid = false, type = 'text', inputMode, autoComplete }) {
   return (
-    <div className={`field ${className}`}>
-      <label className="field-label" htmlFor={id}>{label}{required && <span aria-hidden="true"> *</span>}</label>
+    <div className={cx('flex min-w-0 flex-col gap-1.5', className)}>
+      <label className={labelCls} htmlFor={id}>{label}{required && <span aria-hidden="true"> *</span>}</label>
       <input
-        id={id} type={type} inputMode={inputMode} autoComplete={autoComplete} className="input"
+        id={id} type={type} inputMode={inputMode} autoComplete={autoComplete} className={inputCls}
         value={value} required={required} aria-invalid={invalid || undefined} aria-describedby={invalid ? `${id}-err` : undefined}
         onChange={(event) => onChange(event.target.value)}
       />
-      {invalid && <span id={`${id}-err`} className="field-error">This field is required.</span>}
+      {invalid && <span id={`${id}-err`} className={errorCls}>This field is required.</span>}
     </div>
+  );
+}
+
+const optCls = (on) => cx(
+  'flex w-full items-center gap-3.5 rounded-lg border px-[18px] py-4 text-left transition',
+  on ? 'border-espresso bg-cream ring-1 ring-espresso' : 'border-line-strong bg-white hover:border-walnut',
+);
+
+function OptIcon({ on, children }) {
+  return (
+    <span className={cx('inline-flex size-10 flex-none items-center justify-center rounded-full', on ? 'bg-espresso text-champagne' : 'bg-sand text-walnut')}>
+      {children}
+    </span>
   );
 }
 
 /* ---------- selectable option card ---------- */
 function RadioCard({ active, onClick, title, sub, icon: Icon }) {
   return (
-    <button type="button" role="radio" aria-checked={active} onClick={onClick} className={`opt ${active ? 'is-on' : ''}`}>
-      <span className="opt-icon"><Icon size={17} aria-hidden="true" /></span>
-      <span className="opt-text"><strong>{title}</strong><span>{sub}</span></span>
-      {active && <FiCheck size={16} className="opt-check" aria-hidden="true" />}
+    <button type="button" role="radio" aria-checked={active} onClick={onClick} className={optCls(active)}>
+      <OptIcon on={active}><Icon size={17} aria-hidden="true" /></OptIcon>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5"><strong className="font-semibold text-espresso">{title}</strong><span className="text-[0.85rem] text-muted">{sub}</span></span>
+      {active && <FiCheck size={16} className="flex-none text-espresso" aria-hidden="true" />}
     </button>
   );
 }

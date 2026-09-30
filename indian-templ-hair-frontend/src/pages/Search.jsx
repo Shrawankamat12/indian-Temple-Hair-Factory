@@ -7,6 +7,9 @@ import QuickView from '../components/QuickView';
 import Button from '../components/Button';
 import { ProductGridSkeleton } from '../components/Skeletons';
 import { ErrorState, EmptyState } from '../components/StateBlocks';
+import Container from '../components/Container';
+import Section from '../components/Section';
+import PageTitle from '../components/PageTitle';
 import { useProducts, useCategories, useAttributes } from '../hooks/useStoreData';
 import { topLevelCategories } from '../lib/categories';
 
@@ -69,15 +72,22 @@ export default function Search() {
 
   return (
     <>
-      <div className="container page-title-row">
-        <h1 className="page-title">{q ? <>Search results for “{q}”</> : 'Search'}{q && !loading && <small> ({filtered.length} found)</small>}</h1>
-      </div>
-      <div className="section section--tight">
-        <div className="container">
-          <form className="sform" onSubmit={onSubmit} role="search">
+      <PageTitle count={q && !loading ? `(${filtered.length} found)` : undefined}>
+        {q ? <>Search results for “{q}”</> : 'Search'}
+      </PageTitle>
+      <Section tight>
+        <Container>
+          <form
+            onSubmit={onSubmit} role="search"
+            className="mb-10 flex max-w-[760px] items-center gap-3 rounded-lg border border-line-strong bg-white py-2 pl-5 pr-2 text-walnut transition focus-within:border-walnut focus-within:ring-4 focus-within:ring-gold/30"
+          >
             <FiSearch size={20} aria-hidden="true" />
             <label htmlFor="page-q" className="sr-only">Search products</label>
-            <input id="page-q" type="search" value={localQ} onChange={(e) => setLocalQ(e.target.value)} placeholder="Search bundles, wigs, frontals…" autoComplete="off" />
+            <input
+              id="page-q" type="search" value={localQ} onChange={(e) => setLocalQ(e.target.value)}
+              placeholder="Search bundles, wigs, frontals…" autoComplete="off"
+              className="min-w-0 flex-1 border-0 bg-transparent py-2.5 text-[1.05rem] text-ink outline-none"
+            />
             <Button type="submit" size="sm">Search</Button>
           </form>
 
@@ -92,9 +102,11 @@ export default function Search() {
             <EmptyState title={`No results for “${q}”`} message="Try a different texture, hair type or category, or browse the full collection."
               action={<Button to="/shop">Browse full shop</Button>} />
           ) : (
-            <div className="search-layout">
-              <details className="search-side shop-side" open>
-                <summary className="search-side-toggle">Filters{activeCount > 0 ? ` (${activeCount})` : ''}</summary>
+            <div className="grid items-start gap-[clamp(20px,3vw,40px)] min-[960px]:grid-cols-[250px_minmax(0,1fr)]">
+              <details open className="group rounded-xl border border-line bg-white px-4 pb-4">
+                <summary className="cursor-pointer list-none py-3.5 font-semibold min-[960px]:hidden [&::-webkit-details-marker]:hidden">
+                  Filters{activeCount > 0 ? ` (${activeCount})` : ''}
+                </summary>
                 <FilterPanel {...panel} />
               </details>
               <div>
@@ -107,8 +119,8 @@ export default function Search() {
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </Container>
+      </Section>
       <QuickView product={quickViewProduct} onClose={() => setQuickViewProduct(null)} />
     </>
   );

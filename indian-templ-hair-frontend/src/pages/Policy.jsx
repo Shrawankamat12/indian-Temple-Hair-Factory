@@ -2,6 +2,15 @@ import { useParams } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import { useSiteContent } from '../hooks/useStoreData';
 import { LoadingState } from '../components/StateBlocks';
+import Container from '../components/Container';
+import Section from '../components/Section';
+import Button from '../components/Button';
+import { Link } from 'react-router-dom';
+import { cx } from '../lib/ui';
+
+const POLICY_LINKS = [
+  ['shipping', 'Shipping'], ['returns', 'Returns & Refund'], ['cancellation', 'Cancellation'], ['privacy', 'Privacy'], ['terms', 'Terms'],
+];
 
 const content = {
   shipping: {
@@ -69,21 +78,34 @@ export default function Policy() {
   return (
     <>
       <PageHeader crumbs={[{ label: title }]} title={title} tall />
-      <div className="section section--tight">
-        <div className="container container--narrow">
-          <ol className="policy-list">
+      <Section tight>
+        <Container narrow>
+          <nav className="mb-9 flex flex-wrap gap-2" aria-label="Policies">
+            {POLICY_LINKS.map(([slug, label]) => (
+              <Link
+                key={slug} to={`/policy/${slug}`}
+                className={cx('rounded-full border px-4 py-1.5 text-[0.82rem] font-medium transition', type === slug ? 'border-espresso bg-espresso text-cream' : 'border-line-strong bg-white text-ink hover:border-walnut')}
+              >{label}</Link>
+            ))}
+          </nav>
+          <ol className="m-0 grid list-none gap-0 p-0">
             {sections.map(([h, p], i) => (
-              <li key={`${h}-${i}`} className="policy-item">
-                <span className="policy-num num" aria-hidden="true">{i + 1}</span>
-                <div>
-                  {h && <h2>{h}</h2>}
-                  {(p || '').split(/\n{2,}/).map((para, j) => <p key={j}>{para}</p>)}
+              <li key={`${h}-${i}`} className="grid grid-cols-[36px_1fr] gap-4 border-t border-line py-7 first:border-t-0 first:pt-0 sm:grid-cols-[44px_1fr] sm:gap-5">
+                <span className="inline-flex size-9 items-center justify-center rounded-full border border-gold font-display text-base tabular-nums text-walnut sm:size-11" aria-hidden="true">{i + 1}</span>
+                <div className="grid gap-3">
+                  {h && <h2 className="text-[1.4rem]">{h}</h2>}
+                  {(p || '').split(/\n{2,}/).map((para, j) => <p key={j} className="max-w-none text-ink">{para}</p>)}
                 </div>
               </li>
             ))}
           </ol>
-        </div>
-      </div>
+          <div className="mt-10 rounded-xl bg-sand p-7 text-center">
+            <h3 className="mb-1.5">Questions about this policy?</h3>
+            <p className="mx-auto mb-[18px] text-muted">Our team is happy to help.</p>
+            <Button to="/contact" variant="dark">Contact us</Button>
+          </div>
+        </Container>
+      </Section>
     </>
   );
 }

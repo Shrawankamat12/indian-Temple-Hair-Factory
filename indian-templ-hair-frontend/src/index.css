@@ -1,12 +1,91 @@
 @import "tailwindcss";
-@import "./styles/tokens.css";
-@import "./styles/base.css";
-@import "./styles/ui.css";
-@import "./styles/header.css";
-@import "./styles/footer.css";
-@import "./styles/home.css";
-@import "./styles/shop.css";
-@import "./styles/product.css";
-@import "./styles/checkout.css";
-@import "./styles/account.css";
-@import "./styles/content.css";
+
+/* ---------------------------------------------------------------
+   Indian Temple Hair — design tokens (Tailwind v4 @theme)
+   Brown + gold + cream. Gold is an ACCENT: text on dark surfaces,
+   borders / rules / icons on light surfaces.
+------------------------------------------------------------------ */
+@theme {
+  --color-espresso: #1e1410;
+  --color-chocolate: #4a2818;
+  --color-walnut: #6b3e22;
+  --color-gold: #c89a3d;
+  --color-champagne: #e5c06a;
+  --color-gold-soft: #f1dfa3;
+  --color-cream: #fbf7ef;
+  --color-sand: #f3eadd;
+  --color-ink: #241812;
+  --color-muted: #756b65;
+  --color-line: #e8ded2;
+  --color-line-strong: #d9cbbb;
+  --color-sale: #8f2635;
+  --color-sale-soft: #fbeff0;
+  --color-ok: #3b6b48;
+  --color-ok-soft: #eef5ef;
+  --color-brand: #a9773d;
+  --color-brand-dark: #8a5f2e;
+  --color-charcoal: #1a1a1a;
+
+  --font-display: "Marcellus", Georgia, "Times New Roman", serif;
+  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --breakpoint-nav: 70rem;
+  --container-site: 1480px;
+
+  --shadow-soft: 0 1px 2px rgb(43 24 16 / 0.06);
+  --shadow-card: 0 12px 28px -16px rgb(30 20 16 / 0.28);
+  --shadow-pop: 0 10px 28px -14px rgb(43 24 16 / 0.28);
+  --shadow-deep: 0 24px 60px -24px rgb(43 24 16 / 0.4);
+
+  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-arch: archpulse 1.2s ease-in-out infinite;
+  --animate-rise: rise 0.8s var(--ease-soft) both;
+  --animate-hero-zoom: hero-zoom 9s ease-out forwards;
+  --animate-hero-zoom-flip: hero-zoom-flip 9s ease-out forwards;
+  --animate-pop-in: pop-in 0.3s var(--ease-soft) both;
+
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  @keyframes archpulse {
+    0%, 100% { opacity: 0.35; transform: translateY(2px); }
+    50% { opacity: 1; transform: none; }
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  @keyframes hero-zoom { from { transform: scale(1.08); } to { transform: scale(1); } }
+  @keyframes hero-zoom-flip { from { transform: scale(1.08) scaleX(-1); } to { transform: scale(1) scaleX(-1); } }
+  @keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+}
+
+@layer base {
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 400; /* Marcellus ships one weight — no faux bold */
+    letter-spacing: 0.005em;
+    line-height: 1.15;
+    color: inherit;
+  }
+  button { cursor: pointer; }
+  ::selection { background: var(--color-gold-soft); color: var(--color-espresso); }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--color-walnut); outline-offset: 3px; border-radius: 2px; }
+  .on-dark :focus-visible { outline-color: var(--color-champagne); }
+  input[type="search"]::-webkit-search-cancel-button { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

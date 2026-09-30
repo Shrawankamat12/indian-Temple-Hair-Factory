@@ -1,34 +1,23 @@
-import { Link } from 'react-router-dom';
-import { resolveImageUrl } from '../lib/api';
-import { rupee } from '../lib/format';
+import ProductCarousel from './ProductCarousel';
+import Container from './Container';
 
 /**
- * Compact, secondary "recently viewed" strip: small thumbnails in a single
- * horizontal scroll row. Renders nothing when there are no items.
+ * "Recently viewed" shelf: a small, secondary strip. Same card style as the rest of the site,
+ * but compact (image, name, price) and six-across on desktop. Renders nothing when empty.
  */
-export default function RecentlyViewed({ items, title = 'Recently viewed' }) {
+export default function RecentlyViewed({ items, title = 'Recently Viewed' }) {
   if (!items || items.length === 0) return null;
+
+  // Saved items can be partial. Missing `hasVariants` is treated as true so nothing incomplete is ever
+  // added to the cart from here; the card just opens the product page.
+  const products = items.slice(0, 10).map((p) => ({ ...p, hasVariants: p.hasVariants ?? true }));
+
   return (
-    <section className="rv" aria-label={title}>
-      <div className="container">
-        <h2 className="rv-title">{title}</h2>
-        <ul className="rv-row">
-          {items.slice(0, 10).map((p) => {
-            const img = resolveImageUrl(p.image);
-            return (
-              <li key={p.id}>
-                <Link to={`/product/${p.id}`} className="rv-item">
-                  <span className="rv-thumb">{img ? <img src={img} alt="" loading="lazy" /> : <span>{p.name.charAt(0)}</span>}</span>
-                  <span className="rv-text">
-                    <span className="rv-name">{p.name}</span>
-                    <span className="price rv-price">{rupee(p.price)}</span>
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+    <section className="border-t border-line bg-white py-8 sm:py-10" aria-label={title}>
+      <Container>
+        <h2 className="mb-4 text-[clamp(1.25rem,2vw,1.5rem)] text-espresso">{title}</h2>
+        <ProductCarousel products={products} size="sm" label={title} />
+      </Container>
     </section>
   );
 }

@@ -9,6 +9,11 @@ import RecentlyViewed from '../components/RecentlyViewed';
 import Button from '../components/Button';
 import { ProductGridSkeleton } from '../components/Skeletons';
 import { ErrorState, EmptyState } from '../components/StateBlocks';
+import Container from '../components/Container';
+import Section from '../components/Section';
+import Overlay from '../components/Overlay';
+import { Select } from '../components/Field';
+import { chip, cx, iconBtn, linkU } from '../lib/ui';
 import {
   useProducts, useCategories, useSubCategories, useBrands, useCollections, useAttributes, useBanners,
 } from '../hooks/useStoreData';
@@ -164,6 +169,8 @@ export default function Shop() {
   const bannerTitle = activeCategory?.name || topBanner?.title || 'The Complete Collection';
   const bannerLede = (activeCategory ? (activeCategory.tag || activeCategory.description) : topBanner?.subtitle) || 'Virgin, remy & raw hair, hand-inspected at our Delhi factory.';
 
+  const pagerBtn = 'inline-flex h-[38px] min-w-[38px] items-center justify-center rounded-md border border-line bg-white px-2.5 text-[0.85rem] font-semibold text-espresso transition hover:enabled:border-brand hover:enabled:text-brand disabled:cursor-default disabled:opacity-40 aria-[current=page]:border-brand aria-[current=page]:bg-brand aria-[current=page]:text-white';
+
   return (
     <>
       <PageHeader
@@ -175,50 +182,59 @@ export default function Shop() {
       />
 
       {categories.length > 0 && (
-        <nav className="shop-cats" aria-label="Categories">
-          <div className="container shop-cats-row">
-            <button type="button" className="chip" aria-pressed={!cat} onClick={() => { setCat(null); setSubCat(null); }}>All</button>
+        <nav className="border-b border-line bg-cream" aria-label="Categories">
+          <Container className="flex gap-2.5 overflow-x-auto py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <button type="button" className={cx(chip, 'flex-none')} aria-pressed={!cat} onClick={() => { setCat(null); setSubCat(null); }}>All</button>
             {categories.map((c) => (
-              <button key={c.id} type="button" className="chip" aria-pressed={cat === c.id} onClick={() => { setCat(cat === c.id ? null : c.id); setSubCat(null); }}>{c.name}</button>
+              <button key={c.id} type="button" className={cx(chip, 'flex-none')} aria-pressed={cat === c.id} onClick={() => { setCat(cat === c.id ? null : c.id); setSubCat(null); }}>{c.name}</button>
             ))}
-          </div>
+          </Container>
         </nav>
       )}
 
-      <div className="shop-toolbar-wrap">
-        <div className="container shop-toolbar">
-          <button type="button" className="btn btn-outline btn-sm shop-filter-btn" onClick={() => setFiltersOpen(true)}>
+      <div className="sticky top-[var(--navbar-h,72px)] z-40 border-b border-line bg-cream/95 backdrop-blur">
+        <Container className="flex min-h-14 items-center gap-2.5 min-[960px]:gap-4">
+          <Button variant="outline" size="sm" className="min-[960px]:hidden" onClick={() => setFiltersOpen(true)}>
             <FiSliders size={15} aria-hidden="true" /> Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-          </button>
-          <p className="shop-count" role="status">{loading ? 'Loading…' : `${filtered.length} ${filtered.length === 1 ? 'product' : 'products'}`}</p>
-          <div className="shop-sort">
+          </Button>
+          <p className="m-0 hidden flex-1 text-[0.9rem] font-medium text-espresso min-[960px]:block" role="status">
+            {loading ? 'Loading…' : `${filtered.length} ${filtered.length === 1 ? 'product' : 'products'}`}
+          </p>
+          <div className="ml-auto min-[960px]:ml-0">
             <label htmlFor="sort" className="sr-only">Sort products</label>
-            <select id="sort" className="select" value={sort} onChange={(e) => setSort(e.target.value)}>
+            <Select id="sort" value={sort} onChange={(e) => setSort(e.target.value)} className="min-h-10 w-auto max-w-[170px] py-1.5 sm:max-w-none min-[960px]:min-w-[190px]">
               {SORTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            </Select>
           </div>
-          <div className="shop-view" role="group" aria-label="Layout">
-            <button type="button" aria-pressed={view === 'grid'} onClick={() => setView('grid')} aria-label="Grid view"><FiGrid size={17} /></button>
-            <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')} aria-label="List view"><FiList size={17} /></button>
+          <div className="inline-flex overflow-hidden rounded-md border border-line-strong bg-white" role="group" aria-label="Layout">
+            {[['grid', 'Grid view', FiGrid], ['list', 'List view', FiList]].map(([v, label, Icon]) => (
+              <button
+                key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} aria-label={label}
+                className="inline-flex h-[38px] w-10 items-center justify-center text-muted transition-colors aria-pressed:bg-espresso aria-pressed:text-white"
+              ><Icon size={17} /></button>
+            ))}
           </div>
-        </div>
+        </Container>
       </div>
 
-      <div className="section section--tight">
-        <div className="container shop-layout">
-          <aside className="shop-side" aria-label="Filters">
+      <Section tight>
+        <Container className="grid items-start gap-[clamp(28px,4vw,56px)] min-[960px]:grid-cols-[250px_minmax(0,1fr)]">
+          <aside
+            className="sticky top-[calc(var(--navbar-h,72px)+84px)] hidden max-h-[calc(100vh-var(--navbar-h,72px)-100px)] overflow-auto rounded-xl border border-line bg-white px-4 pb-4 [scrollbar-width:thin] min-[960px]:block"
+            aria-label="Filters"
+          >
             <FilterPanel {...panelProps} />
           </aside>
 
-          <div className="shop-main" id="shop-results">
+          <div id="shop-results" className="min-w-0 scroll-mt-40">
             {activeChips.length > 0 && (
-              <div className="shop-active" aria-label="Active filters">
+              <div className="mb-6 flex flex-wrap items-center gap-2" aria-label="Active filters">
                 {activeChips.map((c) => (
-                  <button key={c.label} type="button" className="chip is-active" onClick={c.clear} aria-label={`Remove filter ${c.label}`}>
+                  <button key={c.label} type="button" className={cx(chip, 'min-h-[34px] px-3 text-[0.8rem]')} aria-pressed="true" onClick={c.clear} aria-label={`Remove filter ${c.label}`}>
                     {c.label} <FiX size={13} aria-hidden="true" />
                   </button>
                 ))}
-                <button type="button" className="link-u" onClick={reset}>Clear all</button>
+                <button type="button" className={linkU} onClick={reset}>Clear all</button>
               </div>
             )}
 
@@ -236,31 +252,37 @@ export default function Shop() {
               <>
                 <ProductGrid products={shown} onQuickView={setQuickViewProduct} columns={3} view={view} />
                 {pages > 1 && (
-                  <nav className="pager" aria-label="Pagination">
-                    <button type="button" className="pager-btn" onClick={() => goPage(page - 1)} disabled={page === 1} aria-label="Previous page"><FiChevronLeft size={16} /></button>
+                  <nav className="mt-9 flex flex-wrap justify-center gap-1.5" aria-label="Pagination">
+                    <button type="button" className={pagerBtn} onClick={() => goPage(page - 1)} disabled={page === 1} aria-label="Previous page"><FiChevronLeft size={16} /></button>
                     {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
-                      <button type="button" key={n} className={`pager-btn ${n === page ? 'is-active' : ''}`} onClick={() => goPage(n)} aria-label={`Page ${n}`} aria-current={n === page ? 'page' : undefined}>{n}</button>
+                      <button type="button" key={n} className={pagerBtn} onClick={() => goPage(n)} aria-label={`Page ${n}`} aria-current={n === page ? 'page' : undefined}>{n}</button>
                     ))}
-                    <button type="button" className="pager-btn" onClick={() => goPage(page + 1)} disabled={page === pages} aria-label="Next page"><FiChevronRight size={16} /></button>
+                    <button type="button" className={pagerBtn} onClick={() => goPage(page + 1)} disabled={page === pages} aria-label="Next page"><FiChevronRight size={16} /></button>
                   </nav>
                 )}
               </>
             )}
           </div>
-        </div>
-      </div>
+        </Container>
+      </Section>
 
       <RecentlyViewed items={recentlyViewed} />
       <QuickView product={quickViewProduct} onClose={() => setQuickViewProduct(null)} />
 
-      <div className={`overlay-backdrop ${filtersOpen ? 'open' : ''}`} onClick={() => setFiltersOpen(false)} aria-hidden="true" />
-      <aside className={`fdrawer ${filtersOpen ? 'open' : ''}`} aria-hidden={!filtersOpen} aria-label="Filters">
-        <div className="fdrawer-top">
-          <h3>Filters</h3>
-          <button type="button" className="icon-btn" onClick={() => setFiltersOpen(false)} aria-label="Close filters"><FiX size={20} /></button>
+      <Overlay open={filtersOpen} onClick={() => setFiltersOpen(false)} />
+      <aside
+        aria-hidden={!filtersOpen} aria-label="Filters"
+        className={cx(
+          'fixed inset-y-0 right-0 z-[80] flex w-[min(92vw,400px)] flex-col bg-cream shadow-deep transition duration-[380ms] ease-soft',
+          filtersOpen ? 'visible translate-x-0' : 'invisible translate-x-full',
+        )}
+      >
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h3 className="text-xl">Filters</h3>
+          <button type="button" className={iconBtn} onClick={() => setFiltersOpen(false)} aria-label="Close filters"><FiX size={20} /></button>
         </div>
-        <div className="fdrawer-body"><FilterPanel {...panelProps} /></div>
-        <div className="fdrawer-foot">
+        <div className="flex-1 overflow-auto px-5 pb-4 pt-1"><FilterPanel {...panelProps} /></div>
+        <div className="border-t border-line bg-white px-5 py-3.5">
           <Button block onClick={() => setFiltersOpen(false)}>Show {filtered.length} results</Button>
         </div>
       </aside>
