@@ -1,7 +1,7 @@
 import { useAsync } from './useAsync';
 import {
   productsApi, categoriesApi, blogsApi, faqsApi, testimonialsApi, bannersApi, reviewsApi,
-  subcategoriesApi, brandsApi, collectionsApi, attributesApi, siteContentApi,
+  subcategoriesApi, brandsApi, collectionsApi, attributesApi, siteContentApi, settingsApi,
 } from '../lib/resources';
 import {
   normalizeProduct, normalizeCategory, normalizeBlog, normalizeFaq, normalizeTestimonial,
@@ -60,26 +60,57 @@ export function useSiteContent() {
   return { siteContent: normalizeSiteContent(data?.data), loading, error };
 }
 
-// Company / contact details (phones, email, address, GST, contact person, social links)
-// shown in the Navbar, Footer, Contact page and elsewhere. Reads from the same admin-editable
-// siteContent.footer object Footer.jsx already uses, merged over sane defaults so the site
-// never breaks before the admin fills these in — one hook, one source of truth, no per-page
-// hardcoding.
+// Public business settings (Admin → Settings): business info, address parts, shipping rates, policy flags.
+// Cached for a minute so Header/Footer/Contact/Checkout don't each refetch on every mount.
+let settingsCache = { at: 0, promise: null };
+const fetchSettings = () => {
+  if (!settingsCache.promise || Date.now() - settingsCache.at > 60000) {
+    settingsCache = { at: Date.now(), promise: settingsApi.public().catch((e) => { settingsCache.promise = null; throw e; }) };
+  }
+  return settingsCache.promise;
+};
+
+export function useSettings() {
+  const { data, loading, error } = useAsync(fetchSettings, []);
+  return { settings: data?.data || null, loading, error };
+}
+
+// Company / contact details shown in the Navbar, Footer, Contact page, checkout and policy pages.
+// Precedence: Admin → Settings (single source of truth) → legacy Website Content footer → neutral fallback.
+// No address or tax number is ever invented here.
 export function useCompanyInfo() {
-  const { siteContent, loading, error } = useSiteContent();
+  const { siteContent, loading: scLoading, error } = useSiteContent();
+  const { settings, loading: stLoading } = useSettings();
   const footer = siteContent?.footer || {};
+  const s = settings || {};
+  const pick = (...vals) => vals.find((v) => v !== undefined && v !== null && String(v).trim() !== '') ?? '';
+  const social = {};
+  ['facebook', 'instagram', 'linkedin', 'youtube', 'tiktok', 'twitter', 'pinterest'].forEach((k) => { if (s[k]) social[k] = s[k]; });
+  const whatsapp = pick(s.whatsapp, footer.socialLinks?.whatsapp, DEFAULT_COMPANY.whatsapp);
   const info = {
-    brandName: DEFAULT_COMPANY.brandName,
-    contactPerson: footer.contactPerson || DEFAULT_COMPANY.contactPerson,
-    brandDescription: footer.brandDescription || DEFAULT_COMPANY.brandDescription,
-    address: footer.address || DEFAULT_COMPANY.address,
-    email: footer.email || DEFAULT_COMPANY.email,
-    phones: footer.phones?.length ? footer.phones : DEFAULT_COMPANY.phones,
-    gst: footer.gst || DEFAULT_COMPANY.gst,
-    businessHours: footer.businessHours || DEFAULT_COMPANY.businessHours,
-    socialLinks: { ...DEFAULT_COMPANY.socialLinks, ...(footer.socialLinks || {}) },
+    brandName: pick(s.storeName, DEFAULT_COMPANY.brandName),
+    legalName: s.legalName || '',
+    tagline: DEFAULT_COMPANY.tagline,
+    contactPerson: pick(footer.contactPerson, DEFAULT_COMPANY.contactPerson),
+    brandDescription: pick(s.businessDescription, footer.brandDescription, DEFAULT_COMPANY.brandDescription),
+    address: pick(s.formattedAddress, footer.address, DEFAULT_COMPANY.address),
+    addressLines: s.addressLines?.length ? s.addressLines : (footer.address ? [footer.address] : []),
+    email: pick(s.storeEmail, footer.email, DEFAULT_COMPANY.email),
+    phones: s.storePhone ? [s.storePhone] : (footer.phones?.length ? footer.phones : DEFAULT_COMPANY.phones),
+    whatsapp,
+    gst: pick(s.gstNumber, footer.gst, DEFAULT_COMPANY.gst),
+    businessHours: pick(s.businessHours, footer.businessHours, DEFAULT_COMPANY.businessHours),
+    googleMapsUrl: s.googleMapsUrl || '',
+    logo: s.logo || '',
+    favicon: s.favicon || '',
+    socialLinks: { ...DEFAULT_COMPANY.socialLinks, ...(footer.socialLinks || {}), ...social, whatsapp },
+    // shipping + policy flags, straight from the admin (no duplicated constants in the UI)
+    shipping: s.shipping || { freeShippingThreshold: 15000, standardRate: 499, expressRate: 999, deliveryMinDays: 3, deliveryMaxDays: 6 },
+    policy: s.policy || { customerCancellation: false, returns: false, refunds: false },
+    policyContactNote: s.policyContactNote || '',
+    codEnabled: s.codEnabled !== false,
   };
-  return { company: info, loading, error };
+  return { company: info, loading: scLoading || stLoading, error };
 }
 
 export function useCategories() {
@@ -117,5 +148,6 @@ export function useProductReviews(productId) {
     () => (productId ? reviewsApi.forProduct(productId) : Promise.resolve({ data: [] })),
     [productId]
   );
-  return { reviews: (data?.data || []).map(normalizeReview), loading, error, refetch };
+  const summary = data?.summary || { average: 0, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
+  return { reviews: (data?.data || []).map(normalizeReview), summary, loading, error, refetch };
 }

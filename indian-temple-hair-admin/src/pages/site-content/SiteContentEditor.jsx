@@ -11,6 +11,8 @@ const TABS = [
   { value: 'process', label: 'Process Steps' },
   { value: 'gallery', label: 'Factory Gallery' },
   { value: 'trust', label: 'Certifications & Countries' },
+  { value: 'about', label: 'About Page' },
+  { value: 'wholesale', label: 'Wholesale Page' },
   { value: 'beforeafter', label: 'Before / After' },
   { value: 'social', label: 'Instagram & Videos' },
   { value: 'coupon', label: 'Coupon Banner' },
@@ -28,6 +30,8 @@ const empty = {
   factoryGallery: { eyebrow: '', title: '', images: [] },
   certifications: [],
   exportCountries: [],
+  aboutPage: { heading: '', lede: '', image: '', storyEyebrow: '', storyHeading: '', story: [], values: [], stats: [], timeline: [], quote: '', quoteAuthor: '' },
+  wholesalePage: { benefits: [], moq: [], steps: [], responseTime: '' },
   beforeAfter: [],
   instagram: { handle: '', images: [] },
   videoReviews: [],
@@ -229,6 +233,80 @@ export default function SiteContentEditor() {
               <FormField label="Export Countries">
                 <TagInput value={values.exportCountries} onChange={(v) => set('exportCountries', v)} placeholder="e.g. USA" />
               </FormField>
+            </div>
+          )}
+
+          {tab === 'about' && (
+            <div className="max-w-3xl flex flex-col gap-5">
+              <FormField label="Page Heading"><Input value={values.aboutPage.heading} onChange={(e) => set('aboutPage.heading', e.target.value)} /></FormField>
+              <FormField label="Intro Line"><Textarea rows={2} value={values.aboutPage.lede} onChange={(e) => set('aboutPage.lede', e.target.value)} /></FormField>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Story Eyebrow"><Input value={values.aboutPage.storyEyebrow} onChange={(e) => set('aboutPage.storyEyebrow', e.target.value)} /></FormField>
+                <FormField label="Story Heading"><Input value={values.aboutPage.storyHeading} onChange={(e) => set('aboutPage.storyHeading', e.target.value)} /></FormField>
+              </div>
+              <FormField label="Story Photo (leave empty to hide)"><SingleImageUpload value={values.aboutPage.image} onChange={(v) => set('aboutPage.image', v)} label="Story Photo" aspect="aspect-[4/5]" className="w-40" /></FormField>
+              <FormField label="Story Paragraphs">
+                <Repeater items={values.aboutPage.story} onChange={(v) => set('aboutPage.story', v)} newItem={() => ''}
+                  render={(item, onItemChange) => <Textarea rows={3} value={item} placeholder="Paragraph" onChange={(e) => onItemChange(e.target.value)} />} />
+              </FormField>
+              <FormField label="Value Points (ticks)"><TagInput value={values.aboutPage.values} onChange={(v) => set('aboutPage.values', v)} placeholder="e.g. Factory-direct, no middlemen" /></FormField>
+              <FormField label="Stats Bar (leave empty to use the Hero stats)">
+                <Repeater items={values.aboutPage.stats} onChange={(v) => set('aboutPage.stats', v)} newItem={() => ({ value: '', label: '' })}
+                  render={(item, onItemChange) => (
+                    <div className="grid grid-cols-2 gap-3 flex-1">
+                      <Input value={item.value} placeholder="200+" onChange={(e) => onItemChange({ ...item, value: e.target.value })} />
+                      <Input value={item.label} placeholder="Artisans" onChange={(e) => onItemChange({ ...item, label: e.target.value })} />
+                    </div>
+                  )} />
+              </FormField>
+              <FormField label="Our Journey (timeline)">
+                <Repeater items={values.aboutPage.timeline} onChange={(v) => set('aboutPage.timeline', v)} newItem={() => ({ year: '', title: '', desc: '' })}
+                  render={(item, onItemChange) => (
+                    <div className="flex flex-col gap-2 flex-1">
+                      <div className="grid grid-cols-[100px_1fr] gap-3">
+                        <Input value={item.year} placeholder="2014" onChange={(e) => onItemChange({ ...item, year: e.target.value })} />
+                        <Input value={item.title} placeholder="Milestone title" onChange={(e) => onItemChange({ ...item, title: e.target.value })} />
+                      </div>
+                      <Textarea rows={2} value={item.desc} placeholder="Description" onChange={(e) => onItemChange({ ...item, desc: e.target.value })} />
+                    </div>
+                  )} />
+              </FormField>
+              <FormField label="Founder Quote"><Textarea rows={2} value={values.aboutPage.quote} onChange={(e) => set('aboutPage.quote', e.target.value)} /></FormField>
+              <FormField label="Quote Author"><Input value={values.aboutPage.quoteAuthor} onChange={(e) => set('aboutPage.quoteAuthor', e.target.value)} /></FormField>
+            </div>
+          )}
+
+          {tab === 'wholesale' && (
+            <div className="max-w-3xl flex flex-col gap-5">
+              <FormField label="Benefits">
+                <Repeater items={values.wholesalePage.benefits} onChange={(v) => set('wholesalePage.benefits', v)} newItem={() => ({ title: '', description: '' })}
+                  render={(item, onItemChange) => (
+                    <div className="flex flex-col gap-2 flex-1">
+                      <Input value={item.title} placeholder="Benefit title" onChange={(e) => onItemChange({ ...item, title: e.target.value })} />
+                      <Textarea rows={2} value={item.description} placeholder="Description" onChange={(e) => onItemChange({ ...item, description: e.target.value })} />
+                    </div>
+                  )} />
+              </FormField>
+              <FormField label="Minimum Order Quantity & Lead Time">
+                <Repeater items={values.wholesalePage.moq} onChange={(v) => set('wholesalePage.moq', v)} newItem={() => ({ product: '', minimum: '', leadTime: '' })}
+                  render={(item, onItemChange) => (
+                    <div className="grid grid-cols-3 gap-3 flex-1">
+                      <Input value={item.product} placeholder="Product" onChange={(e) => onItemChange({ ...item, product: e.target.value })} />
+                      <Input value={item.minimum} placeholder="Minimum, e.g. 25 kg" onChange={(e) => onItemChange({ ...item, minimum: e.target.value })} />
+                      <Input value={item.leadTime} placeholder="Lead time, e.g. 7–10 days" onChange={(e) => onItemChange({ ...item, leadTime: e.target.value })} />
+                    </div>
+                  )} />
+              </FormField>
+              <FormField label="How It Works (steps)">
+                <Repeater items={values.wholesalePage.steps} onChange={(v) => set('wholesalePage.steps', v)} newItem={() => ({ title: '', description: '' })}
+                  render={(item, onItemChange) => (
+                    <div className="flex flex-col gap-2 flex-1">
+                      <Input value={item.title} placeholder="Step title" onChange={(e) => onItemChange({ ...item, title: e.target.value })} />
+                      <Textarea rows={2} value={item.description} placeholder="Description" onChange={(e) => onItemChange({ ...item, description: e.target.value })} />
+                    </div>
+                  )} />
+              </FormField>
+              <FormField label="Response-time Message"><Input value={values.wholesalePage.responseTime} onChange={(e) => set('wholesalePage.responseTime', e.target.value)} placeholder="Our export team responds within 24 hours." /></FormField>
             </div>
           )}
 

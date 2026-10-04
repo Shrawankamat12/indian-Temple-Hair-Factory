@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { FiX, FiHeart } from 'react-icons/fi';
 import PhotoBlock from './PhotoBlock';
 import StarRating from './StarRating';
@@ -53,9 +54,10 @@ export default function QuickView({ product, onClose }) {
                   <span className="text-[0.82rem] text-muted">{[product.hairType, product.texture].filter(Boolean).join(', ')}</span>
                 )}
                 <h3 className="text-[1.6rem]">{product.name}</h3>
-                {product.rating > 0 && (
-                  <div className="inline-flex items-center gap-2 text-[0.8rem] text-muted"><StarRating value={product.rating} /><span>{product.rating} ({product.reviews} reviews)</span></div>
-                )}
+                <Link to={`/product/${product.id}#reviews`} onClick={onClose} className="inline-flex items-center gap-2 text-[0.8rem] text-muted transition-colors hover:text-brand">
+                  <StarRating value={product.rating > 0 ? product.rating : 0} />
+                  <span>{product.rating > 0 && product.reviews > 0 ? `${Number(product.rating).toFixed(1)} (${product.reviews} ${product.reviews === 1 ? 'review' : 'reviews'})` : 'Write a review'}</span>
+                </Link>
                 <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
                   <span className="font-sans text-2xl font-bold tabular-nums text-espresso">{rupee(product.price)}</span>
                   {onSale && <span className="text-[0.88rem] tabular-nums text-muted line-through">{rupee(product.mrp)}</span>}

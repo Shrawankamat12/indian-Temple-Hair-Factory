@@ -314,6 +314,7 @@ export default function ProductForm() {
         sku: "",
         price: "",
         stock: 0,
+        isActive: true,
       },
     ]);
   const updateVariant = (idx, key, val) => {
@@ -714,6 +715,7 @@ export default function ProductForm() {
                           "SKU",
                           "Price",
                           "Stock",
+                          "Active",
                           "",
                         ].map((h) => (
                           <th key={h} className="px-2 py-2">
@@ -774,6 +776,14 @@ export default function ProductForm() {
                                 )
                               }
                               className="py-1.5 text-xs w-16"
+                            />
+                          </td>
+                          <td className="px-1 py-1.5 text-center">
+                            <input
+                              type="checkbox"
+                              aria-label="Variant active"
+                              checked={v.isActive !== false}
+                              onChange={(e) => updateVariant(idx, "isActive", e.target.checked)}
                             />
                           </td>
                           <td className="px-1 py-1.5">

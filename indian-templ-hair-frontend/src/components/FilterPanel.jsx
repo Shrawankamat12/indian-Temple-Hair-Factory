@@ -13,7 +13,7 @@ const fchip =
  */
 export default function FilterPanel({ data, state, set, activeCount, onReset, lengths, onApply }) {
   const { categories, subcategories, brands, collections, hairTypeAttrs, textureAttrs, colorAttrs, laceAttrs = [], densityAttrs = [] } = data;
-  const { cat, subCat, brand, collection, hairType, texture, length, color, laceType, density, rating, maxPrice } = state;
+  const { cat, subCat, brand, collection, hairType, texture, length, color, laceType, density, rating } = state;
   const toggle = (current, value, setter) => setter(current === value ? null : value);
 
   const Chip = ({ active, onClick, children }) => (
@@ -69,13 +69,15 @@ export default function FilterPanel({ data, state, set, activeCount, onReset, le
         </FilterAccordion>
       )}
 
-      <FilterAccordion title="Price Range">
-        <input
-          type="range" min="0" max="35000" step="500" value={maxPrice} className="w-full accent-walnut"
-          aria-label="Maximum price" onChange={(e) => set.maxPrice(Number(e.target.value))}
-        />
-        <div className="mt-1.5 flex justify-between text-[0.8rem] tabular-nums text-muted"><span>₹0</span><span>Up to ₹{maxPrice.toLocaleString('en-IN')}</span></div>
-      </FilterAccordion>
+      {state.priceCeiling > 0 && (
+        <FilterAccordion title="Price Range">
+          <input
+            type="range" min="0" max={state.priceCeiling} step="500" value={state.maxPrice} className="w-full accent-walnut"
+            aria-label="Maximum price" onChange={(e) => set.maxPrice(Number(e.target.value))}
+          />
+          <div className="mt-1.5 flex justify-between text-[0.8rem] tabular-nums text-muted"><span>₹0</span><span>Up to ₹{state.maxPrice.toLocaleString('en-IN')}</span></div>
+        </FilterAccordion>
+      )}
 
       {categories.length > 0 && (
         <FilterAccordion title="Category" defaultOpen={false}>

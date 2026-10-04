@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { FiHeart, FiUser, FiShoppingBag, FiChevronDown, FiMenu } from 'react-icons/fi';
 import { useStore } from '../context/StoreContext';
-import { useCategories } from '../hooks/useStoreData';
+import { useCategories, useCompanyInfo } from '../hooks/useStoreData';
+import { imageOr } from '../lib/media';
 import { menuCategories } from '../lib/categories';
 import AnnouncementBar from './AnnouncementBar';
 import MegaMenu from './MegaMenu';
@@ -33,6 +34,9 @@ const headAct =
 export default function Navbar() {
   const { cartCount, wishlist, user } = useStore();
   const { categories: allCategories } = useCategories();
+  const { company } = useCompanyInfo();
+  // Logo uploaded in Admin → Settings → Business Information wins; the bundled file is only the fallback.
+  const logoSrc = imageOr(company.logo, logo);
   const categories = menuCategories(allCategories);
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
@@ -97,11 +101,11 @@ export default function Navbar() {
 
           {/* Logo: centred on mobile, spans both header rows on desktop */}
           <Link
-            to="/" aria-label="Indian Temple Hair Export, home"
+            to="/" aria-label={`${company.brandName}, home`}
             className="group col-start-2 row-start-1 inline-flex items-center justify-self-center nav:col-start-1 nav:row-span-2 nav:justify-self-auto nav:py-0.5"
           >
             <img
-              src={logo} alt="Indian Temple Hair Export" width="102" height="92" decoding="async"
+              src={logoSrc} alt={company.brandName} width="102" height="92" decoding="async"
               className="h-[52px] w-auto max-w-none object-contain transition-transform duration-300 ease-soft group-hover:scale-[1.03] sm:h-[58px] nav:h-[100px]"
             />
           </Link>

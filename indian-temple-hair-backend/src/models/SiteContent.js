@@ -138,6 +138,69 @@ const siteContentSchema = new mongoose.Schema({
     ],
   },
 
+  // ---------------- ABOUT PAGE (editable in Admin → Website Content → About Page) ----------------
+  aboutPage: {
+    heading: { type: String, default: 'About Indian Temple Remy Hair Exports' },
+    lede: { type: String, default: 'Manufacturer, exporter and supplier of 100% human hair, built in Delhi, trusted worldwide.' },
+    image: { type: String, default: '' },
+    storyEyebrow: { type: String, default: 'Our story' },
+    storyHeading: { type: String, default: 'A factory built on trust, not middlemen' },
+    story: {
+      type: [String],
+      default: [
+        'Indian Temple Remy Hair Exports was founded in 2014 out of a simple frustration: too much of the "Indian hair" sold worldwide passed through layers of resellers before it ever reached a real customer.',
+        'We set out to manufacture, sort and export hair directly from our own factory floor in Najafgarh Road, New Delhi, keeping every stage of production, from sourcing to packing, under one roof and one standard of quality.',
+        'Today, a team of 200+ artisans hand-sorts, double-draws and wefts every bundle that leaves our facility, shipping to distributors, salons and stylists in more than 50 countries.',
+      ],
+    },
+    values: { type: [String], default: ['Factory-direct, no middlemen', 'Hand-sorted, double-drawn, QC-checked', 'Batch documentation with every order', 'Ethically sourced and traceable'] },
+    stats: { type: [{ value: String, label: String, _id: false }], default: [] },
+    timeline: {
+      type: [{ year: String, title: String, desc: String, _id: false }],
+      default: [
+        { year: '2014', title: 'Founded in New Delhi', desc: 'Indian Temple Remy Hair Exports began as a small sorting unit serving local salons across Delhi.' },
+        { year: '2017', title: 'First Export Shipment', desc: 'Our first international container shipped to a distributor in the United States.' },
+        { year: '2019', title: '100+ Team Members', desc: 'In-house wefting and QC teams expanded to keep every stage of production under one roof.' },
+        { year: '2022', title: 'Expanded to 40+ Countries', desc: 'Wholesale partnerships grew across Africa, Europe and the Middle East.' },
+        { year: '2026', title: '200+ Artisans, 50+ Countries', desc: 'Today we manufacture, export and supply raw, remy and virgin hair worldwide.' },
+      ],
+    },
+    quote: { type: String, default: 'We never wanted to be the biggest supplier, just the one distributors trust to open every carton and find exactly what they ordered.' },
+    quoteAuthor: { type: String, default: 'Founder, Indian Temple Remy Hair Exports' },
+  },
+
+  // ---------------- WHOLESALE PAGE (editable in Admin → Website Content → Wholesale Page) ----------------
+  wholesalePage: {
+    benefits: {
+      type: [{ title: String, description: String, _id: false }],
+      default: [
+        { title: 'Factory-Direct Pricing', description: 'Skip resellers entirely and buy at the same rate our own distributors do.' },
+        { title: 'Private Labelling', description: 'Custom packaging and batch tagging available on qualifying orders.' },
+        { title: 'Dedicated Account Manager', description: 'A single point of contact for reordering, documentation and shipping updates.' },
+        { title: 'Flexible Payment Terms', description: 'LC, T/T and partial-advance terms available for established partners.' },
+      ],
+    },
+    moq: {
+      type: [{ product: String, minimum: String, leadTime: String, _id: false }],
+      default: [
+        { product: 'Raw bundles', minimum: '25 kg', leadTime: '7–10 days' },
+        { product: 'Wefted extensions', minimum: '50 bundles', leadTime: '10–14 days' },
+        { product: 'Closures & frontals', minimum: '30 pieces', leadTime: '10–14 days' },
+        { product: 'Wigs', minimum: '20 pieces', leadTime: '14–18 days' },
+      ],
+    },
+    steps: {
+      type: [{ title: String, description: String, _id: false }],
+      default: [
+        { title: 'Send your enquiry', description: 'Tell us what you need, volumes and destination.' },
+        { title: 'Get a quote', description: 'Pricing, samples and lead time within 24 hours.' },
+        { title: 'Production & QC', description: 'Made and quality-checked at our Delhi factory.' },
+        { title: 'Ship worldwide', description: 'Documentation and air / sea freight arranged.' },
+      ],
+    },
+    responseTime: { type: String, default: 'Our export team responds within 24 hours.' },
+  },
+
   // ---------------- FOOTER ----------------
   footer: {
     brandDescription: { type: String, default: 'Indian Temple Remy Hair Exports — 100% human temple hair extensions, wigs, closures and raw bundles, processed and exported from Najafgarh Road Industrial Area, New Delhi.' },

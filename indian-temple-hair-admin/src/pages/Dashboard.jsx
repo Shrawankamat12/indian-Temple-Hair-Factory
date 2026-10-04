@@ -23,7 +23,8 @@ const icon = {
 
 const empty = {
   revenue: 0, ordersCount: 0, productsCount: 0, customersCount: 0, categoriesCount: 0, brandsCount: 0,
-  lowStockCount: 0, pendingOrders: 0, completedOrders: 0, cancelledOrders: 0,
+  lowStockCount: 0, pendingOrders: 0, processingOrders: 0, shippedOrders: 0, deliveredOrders: 0, completedOrders: 0, cancelledOrders: 0,
+  paidOrders: 0, pendingPayments: 0, failedPayments: 0, totalReviews: 0, pendingReviews: 0, totalInquiries: 0, pendingInquiries: 0,
   recentOrders: [], recentCustomers: [], bestSellers: [], salesTrend: [], ordersByStatus: [], categoryBreakdown: [],
   notifications: [], activity: [],
 };
@@ -44,16 +45,25 @@ export default function Dashboard() {
       <PageHeader title="Dashboard" subtitle="A live overview of your store's performance." />
 
       <StatGrid>
-        <Stat label="Revenue" value={formatCurrency(d.revenue)} ic={icon.revenue} />
-        <Stat label="Orders" value={d.ordersCount} ic={icon.orders} />
+        <Stat label="Total Sales (paid)" value={formatCurrency(d.revenue)} ic={icon.revenue} />
+        <Stat label="Total Orders" value={d.ordersCount} ic={icon.orders} />
         <Stat label="Products" value={d.productsCount} ic={icon.products} />
         <Stat label="Customers" value={d.customersCount} ic={icon.customers} />
         <Stat label="Categories" value={d.categoriesCount} ic={icon.categories} />
         <Stat label="Brands" value={d.brandsCount} ic={icon.brands} />
         <Stat label="Low Stock" value={d.lowStockCount} ic={icon.warn} tone="warn" />
         <Stat label="Pending Orders" value={d.pendingOrders} tone="warn" />
-        <Stat label="Completed Orders" value={d.completedOrders} tone="ok" />
+        <Stat label="Processing Orders" value={d.processingOrders} tone="warn" />
+        <Stat label="Shipped Orders" value={d.shippedOrders} />
+        <Stat label="Delivered Orders" value={d.deliveredOrders} tone="ok" />
         <Stat label="Cancelled Orders" value={d.cancelledOrders} tone="danger" />
+        <Stat label="Paid Orders" value={d.paidOrders} tone="ok" />
+        <Stat label="Pending Payments" value={d.pendingPayments} tone="warn" />
+        <Stat label="Failed Payments" value={d.failedPayments} tone="danger" />
+        <Stat label="Total Reviews" value={d.totalReviews} />
+        <Stat label="Pending Reviews" value={d.pendingReviews} tone="warn" />
+        <Stat label="Wholesale Enquiries" value={d.totalInquiries} />
+        <Stat label="New Enquiries" value={d.pendingInquiries} tone="warn" />
       </StatGrid>
 
       <div className="grid grid-cols-3 gap-5 mb-5">

@@ -3,7 +3,7 @@ import {
   FiX, FiPlay, FiHeart, FiTruck, FiShield, FiShare2, FiCheck, FiMessageCircle, FiRotateCcw,
   FiChevronLeft, FiChevronRight, FiMaximize2, FiImage,
 } from 'react-icons/fi';
-import { useParams, Link, Navigate } from 'react-router-dom';
+import { useParams, useLocation, Link, Navigate } from 'react-router-dom';
 import StarRating from '../components/StarRating';
 import Breadcrumb from '../components/Breadcrumb';
 import SectionHeading from '../components/SectionHeading';
@@ -16,7 +16,7 @@ import { LineSkeleton, BlockSkeleton } from '../components/Skeletons';
 import { ErrorState } from '../components/StateBlocks';
 import { rupee } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
-import { useProduct, useProducts, useProductReviews, useSiteContent } from '../hooks/useStoreData';
+import { useProduct, useProducts, useProductReviews, useSiteContent, useCompanyInfo } from '../hooks/useStoreData';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { reviewsApi, shippingApi } from '../lib/resources';
 import ProductCarousel from '../components/ProductCarousel';
@@ -233,13 +233,13 @@ export default function ProductDetail() {
 
   // Admin-managed variants (length / colour / texture / weight / density) drive the picker
   // when the product has them; otherwise we fall back to the original static option lists.
-  const variants = product?.hasVariants ? (product.variants || []) : [];
+  const variants = product?.hasVariants ? (product.variants || []).filter((v) => v.isActive !== false) : [];
   const lengthOptions = useMemo(() => {
     const fromVariants = [...new Set(variants.map((v) => v.length).filter(Boolean))];
     return fromVariants.length ? fromVariants : DEFAULT_LENGTHS;
   }, [variants]);
   const colorOptions = useMemo(() => {
-    const fromVariants = [...new Set(variants.map((v) => v.colour).filter(Boolean))];
+    const fromVariants = [...new Set(variants.map((v) => v.color).filter(Boolean))];
     return fromVariants.length ? fromVariants : DEFAULT_COLORS;
   }, [variants]);
 
@@ -254,7 +254,7 @@ export default function ProductDetail() {
   }, [variants, product?.hairDensity]);
 
   const selectedVariant = variants.find(
-    (v) => (!v.length || String(v.length) === String(selLength)) && (!v.colour || v.colour === selColor)
+    (v) => (!v.length || String(v.length) === String(selLength)) && (!v.color || v.color === selColor)
       && (!v.laceType || !selLace || v.laceType === selLace) && (!v.density || !selDensity || v.density === selDensity)
   );
 
@@ -272,11 +272,26 @@ export default function ProductDetail() {
   const { products: sameCategory } = useProducts(product ? { category: product.category, limit: 8 } : {});
   // "Similar Products": overlap on admin-assigned tags, distinct from same-category "Related Products" below.
   const { products: tagMatches } = useProducts(product?.tags?.length ? { tags: product.tags[0], limit: 8 } : {});
-  const { reviews, loading: reviewsLoading, refetch: refetchReviews } = useProductReviews(product?.id);
+  const { reviews, summary, loading: reviewsLoading, refetch: refetchReviews } = useProductReviews(product?.id);
+  const { company } = useCompanyInfo();
+  const [eligibility, setEligibility] = useState(null);
+  useEffect(() => {
+    setEligibility(null);
+    if (user && product?.id) reviewsApi.eligibility(product.id).then((r) => setEligibility(r.data)).catch(() => {});
+  }, [user, product?.id]);
   const recentlyViewed = useRecentlyViewed(product);
 
-  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
+  const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', comment: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
+
+  // Deep link from the product card ("/product/:id#reviews"): open the Reviews tab and scroll to it.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash !== '#reviews' || !product?.id) return undefined;
+    setTab('Reviews');
+    const t = setTimeout(() => document.getElementById('tab-Reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+    return () => clearTimeout(t);
+  }, [hash, product?.id]);
 
   if (loading) {
     return (
@@ -321,7 +336,13 @@ export default function ProductDetail() {
   const effectiveStock = selectedVariant ? selectedVariant.stock : product.stock;
   const effectiveSku = selectedVariant?.sku || product.sku;
   const onSale = product.discountPct > 0;
-  const cartItem = { ...product, price: effectivePrice, sku: effectiveSku, length: selLength, color: selColor };
+  // variantId / variantSku are what the server uses to price the line; price here is display-only.
+  const cartItem = {
+    ...product, price: effectivePrice, sku: effectiveSku, length: selLength, color: selColor,
+    variantId: selectedVariant?.id || null, variantSku: selectedVariant?.sku || undefined,
+    laceType: selLace || undefined, density: selDensity || undefined,
+    ...(selectedVariant?.mrp ? { mrp: selectedVariant.mrp } : {}),
+  };
   const whyItems = (siteContent?.whyChooseUs?.items || []).slice(0, 4);
   const alsoLike = [...related, ...similar];
   const saving = onSale && product.mrp > effectivePrice ? product.mrp - effectivePrice : 0;
@@ -372,9 +393,10 @@ export default function ProductDetail() {
     }
     setSubmittingReview(true);
     try {
-      await reviewsApi.create({ productId: product.id, rating: reviewForm.rating, comment: reviewForm.comment });
+      await reviewsApi.create({ productId: product.id, rating: reviewForm.rating, title: reviewForm.title, comment: reviewForm.comment });
       showToast('Thanks! Your review will appear once approved.');
-      setReviewForm({ rating: 5, comment: '' });
+      setReviewForm({ rating: 5, title: '', comment: '' });
+      setEligibility((e) => ({ ...(e || {}), alreadyReviewed: true, reviewStatus: 'pending' }));
       refetchReviews();
     } catch (err) {
       showError(err, 'Could not submit your review');
@@ -426,17 +448,22 @@ export default function ProductDetail() {
                   </div>
                 )}
                 <h1 className="text-[clamp(1.6rem,2.8vw,2.3rem)] leading-[1.1]">{product.name}</h1>
-                <div className="mt-3 inline-flex items-center gap-2 text-[0.8rem] text-muted">
-                  <StarRating value={product.rating} size={15} />
-                  <span>{product.rating} ({product.reviews} reviews)</span>
-                </div>
+                <button
+                  type="button" className="mt-3 inline-flex items-center gap-2 text-[0.8rem] text-muted transition-colors hover:text-brand"
+                  onClick={() => { setTab('Reviews'); document.getElementById('tab-Reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                >
+                  <StarRating value={product.reviews > 0 ? product.rating : 0} size={15} />
+                  {product.reviews > 0
+                    ? <span>{Number(product.rating).toFixed(1)} ({product.reviews} {product.reviews === 1 ? 'review' : 'reviews'})</span>
+                    : <span className="underline-offset-2 hover:underline">No reviews yet · Write a review</span>}
+                </button>
 
                 <div className="mt-5 flex flex-wrap items-baseline gap-x-3.5 gap-y-2 rounded-2xl bg-[linear-gradient(135deg,#fbf5ea,#f5e9d6)] px-5 py-4">
                   <span className="font-sans text-[2rem] font-bold tabular-nums tracking-tight text-espresso">{rupee(effectivePrice)}</span>
                   {onSale && <span className="text-[1.05rem] tabular-nums text-muted line-through">{rupee(product.mrp)}</span>}
                   {onSale && <Badge kind="sale">-{product.discountPct}% off</Badge>}
                   {saving > 0 && <span className="text-[0.85rem] font-semibold text-ok">You save {rupee(saving)}</span>}
-                  <span className="basis-full text-[0.78rem] text-muted">Inclusive of all taxes. Free shipping on orders above ₹15,000.</span>
+                  <span className="basis-full text-[0.78rem] text-muted">Inclusive of all taxes.{company.shipping.freeShippingThreshold > 0 && ` Free shipping on orders above ${rupee(company.shipping.freeShippingThreshold)}.`}</span>
                 </div>
 
                 {product.description && <p className="mt-5 max-w-[56ch] text-muted">{product.description}</p>}
@@ -509,7 +536,7 @@ export default function ProductDetail() {
                     <QtyStepper value={qty} onDec={() => setQty((q) => Math.max(1, q - 1))} onInc={() => setQty((q) => q + 1)} />
                   </div>
                   <p className={cx('m-0 mb-2.5 text-[0.88rem] font-semibold', effectiveStock > 0 ? 'text-ok' : 'text-sale')}>
-                    {effectiveStock > 0 ? 'In stock. Ships within 24 hours from Delhi.' : 'Currently out of stock'}
+                    {effectiveStock > 0 ? `In stock. Delivery in ${company.shipping.deliveryMinDays}–${company.shipping.deliveryMaxDays} business days.` : 'Currently out of stock'}
                     {lowStock && <span className="ml-2 rounded-sm bg-sale-soft px-2 py-0.5 text-[0.74rem] text-sale">Only {effectiveStock} left</span>}
                   </p>
                 </div>
@@ -554,13 +581,15 @@ export default function ProductDetail() {
                 </div>
               </div>
 
-              <div className={noteBox}>
-                <FiRotateCcw size={20} aria-hidden="true" className="mt-0.5 flex-none text-gold" />
-                <div>
-                  <strong className="mb-1 block text-espresso">Easy 7-day returns</strong>
-                  <p className="m-0 text-[0.9rem] text-muted">Unused, unwashed hair in its original packaging can be returned within 7 days of delivery. <Link to="/policy/returns" className="font-semibold text-walnut underline underline-offset-2">Read the return policy</Link></p>
+              {!company.policy.returns && (
+                <div className={noteBox}>
+                  <FiRotateCcw size={20} aria-hidden="true" className="mt-0.5 flex-none text-gold" />
+                  <div>
+                    <strong className="mb-1 block text-espresso">All sales are final</strong>
+                    <p className="m-0 text-[0.9rem] text-muted">No returns, refunds or cancellations once an order is placed. Questions? Call {company.phones[0]}. <Link to="/policy/returns" className="font-semibold text-walnut underline underline-offset-2">Read the policy</Link></p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className={noteBox}>
                 <FiShield size={20} aria-hidden="true" className="mt-0.5 flex-none text-gold" />
@@ -607,7 +636,9 @@ export default function ProductDetail() {
               </div>
               <div className="max-w-[800px] pt-8" id="pdp-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
                 {tab === 'Product Details' && (
-                  <p className="text-ink">{product.description || `This piece is sourced through our Delhi factory's standard chain: hand-collected, sorted by our artisans for ${(product.texture || '').toLowerCase()} pattern and root direction, then double-drawn for uniform thickness before wefting. Every batch carries a QC signature before it leaves our New Delhi facility.`}</p>
+                  product.description
+                    ? <p className="text-ink">{product.description}</p>
+                    : <p className="text-muted">No description has been added for this product yet.</p>
                 )}
                 {tab === 'Specifications' && (
                   <>
@@ -629,15 +660,30 @@ export default function ProductDetail() {
                 )}
                 {tab === 'Shipping' && (
                   <div className="grid gap-4">
-                    <p className="text-ink">{product.shippingInfo || 'Ships from our Delhi warehouse within 24 hours. Domestic orders arrive in 3–6 business days; international orders in 6–12 business days depending on customs processing. Bulk and wholesale orders may ship by air freight with a separate timeline confirmed at checkout.'}</p>
-                    {product.returnPolicy && <p className="text-muted"><strong className="text-espresso">Returns:</strong> {product.returnPolicy}</p>}
+                    <p className="text-ink">{product.shippingInfo || `Orders arrive in ${company.shipping.deliveryMinDays}–${company.shipping.deliveryMaxDays} business days.${company.shipping.freeShippingThreshold > 0 ? ` Free shipping on orders above ${rupee(company.shipping.freeShippingThreshold)}.` : ''}`}</p>
+                    
                   </div>
                 )}
                 {tab === 'Reviews' && (
                   <div>
-                    <div className="flex items-center gap-[18px] pb-6">
-                      <span className="font-display text-[3.4rem] leading-none text-espresso">{product.rating}</span>
-                      <div><StarRating value={product.rating} size={17} /><span className="mt-1 block text-[0.85rem] text-muted">{product.reviews} verified reviews</span></div>
+                    <div className="grid gap-6 pb-6 sm:grid-cols-[auto_1fr] sm:items-center">
+                      <div className="flex items-center gap-[18px]">
+                        <span className="font-display text-[3.4rem] leading-none text-espresso">{summary.count ? summary.average.toFixed(1) : '–'}</span>
+                        <div><StarRating value={summary.average} size={17} /><span className="mt-1 block text-[0.85rem] text-muted">{summary.count} {summary.count === 1 ? 'review' : 'reviews'}</span></div>
+                      </div>
+                      <ul className="m-0 grid max-w-[380px] list-none gap-1.5 p-0" aria-label="Rating distribution">
+                        {[5, 4, 3, 2, 1].map((n) => {
+                          const c = summary.distribution?.[n] || 0;
+                          const pct = summary.count ? Math.round((c / summary.count) * 100) : 0;
+                          return (
+                            <li key={n} className="grid grid-cols-[34px_1fr_28px] items-center gap-2.5 text-[0.82rem] text-muted">
+                              <span>{n} ★</span>
+                              <span className="h-2 overflow-hidden rounded-full bg-sand"><span className="block h-full rounded-full bg-gold" style={{ width: `${pct}%` }} /></span>
+                              <span className="text-right tabular-nums">{c}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
                     </div>
 
                     {reviewsLoading ? (
@@ -649,13 +695,18 @@ export default function ProductDetail() {
                         {reviews.map((r) => (
                           <li key={r.id} className="border-t border-line py-[18px]">
                             <StarRating value={r.rating} size={13} />
-                            <p className="my-2 text-ink">"{r.comment}"</p>
-                            <span className="text-[0.82rem] text-muted">{r.name || 'Verified Buyer'}{r.date ? `, ${r.date}` : ''}</span>
+                            {r.title && <strong className="mt-1.5 block text-espresso">{r.title}</strong>}
+                            <p className="my-2 text-ink">{r.comment}</p>
+                            <span className="text-[0.82rem] text-muted">{r.name || 'Customer'}{r.date ? `, ${r.date}` : ''}{r.verified ? ' · Verified purchase' : ''}</span>
+                            {r.reply && <p className="mt-2 rounded-md bg-sand/60 px-3 py-2 text-[0.85rem] text-muted"><strong className="text-espresso">Reply from {company.brandName}:</strong> {r.reply}</p>}
                           </li>
                         ))}
                       </ul>
                     )}
 
+                    {eligibility?.alreadyReviewed ? (
+                      <p className="mt-8 rounded-xl bg-sand/50 p-5 text-[0.9rem] text-muted">{eligibility.reviewStatus === 'approved' ? 'Thanks — your review is live on this page.' : eligibility.reviewStatus === 'rejected' ? 'Your review was not published.' : 'Thanks! Your review is awaiting approval.'}</p>
+                    ) : (
                     <form className="mt-8 grid max-w-[560px] gap-4 rounded-2xl border border-line bg-sand/40 p-7" onSubmit={submitReview}>
                       <h3 className="text-[1.25rem]">Write a review</h3>
                       <div className="flex flex-wrap gap-2" role="group" aria-label="Rating">
@@ -664,11 +715,17 @@ export default function ProductDetail() {
                         ))}
                       </div>
                       <div className="flex flex-col gap-1.5">
+                        <label className="text-[0.8rem] font-semibold text-espresso" htmlFor="review-title">Title (optional)</label>
+                        <input id="review-title" maxLength={120} className="rounded-md border border-line bg-white px-3 py-2.5 text-[0.95rem]" value={reviewForm.title} onChange={(e) => setReviewForm((f) => ({ ...f, title: e.target.value }))} />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
                         <label className="text-[0.8rem] font-semibold text-espresso" htmlFor="review-comment">Your experience</label>
-                        <Textarea id="review-comment" placeholder="Share your experience with this product…" value={reviewForm.comment} onChange={(e) => setReviewForm((f) => ({ ...f, comment: e.target.value }))} rows={4} required />
+                        <Textarea id="review-comment" placeholder="Share your experience with this product…" value={reviewForm.comment} onChange={(e) => setReviewForm((f) => ({ ...f, comment: e.target.value }))} rows={4} minLength={5} maxLength={2000} required />
                       </div>
                       <Button type="submit" variant="dark" loading={submittingReview}>{submittingReview ? 'Submitting…' : user ? 'Submit review' : 'Sign in to review'}</Button>
+                      {user && eligibility && eligibility.verifiedPurchase && <p className="m-0 text-[0.8rem] text-muted">Your review will be marked as a verified purchase.</p>}
                     </form>
+                    )}
                   </div>
                 )}
               </div>

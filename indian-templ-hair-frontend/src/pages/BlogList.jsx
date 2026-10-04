@@ -34,7 +34,7 @@ export default function BlogList() {
 
   return (
     <>
-      <PageHeader crumbs={[{ label: 'Journal' }]} title="The Journal" lede="Hair care guides, wholesale advice and stories from our Delhi factory floor." />
+      <PageHeader crumbs={[{ label: 'Journal' }]} title="The Journal" lede="Hair care guides, wholesale advice and stories from our team." />
       <Section tight>
         <Container>
           <div className="mb-9 flex flex-wrap gap-2" role="group" aria-label="Filter articles">

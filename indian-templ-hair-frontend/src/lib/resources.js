@@ -93,8 +93,12 @@ export const bannersApi = {
 };
 
 export const reviewsApi = {
-  forProduct: (productId) =>
-    api.get(`/reviews/product/${productId}`),
+  // Envelope is { data: reviews[], summary: { average, count, distribution: {1..5} }, page, pages }
+  forProduct: (productId, params) =>
+    api.get(`/reviews/product/${productId}`, params),
+
+  eligibility: (productId) =>
+    api.get(`/reviews/product/${productId}/eligibility`),
 
   create: (payload) =>
     api.post('/reviews', payload),
@@ -153,21 +157,25 @@ export const ordersApi = {
   mine: () =>
     api.get('/orders/my'),
 
-  get: (idOrOrderNumber) =>
-    api.get(`/orders/${idOrOrderNumber}`),
+  get: (idOrOrderNumber, token) =>
+    api.get(`/orders/${idOrOrderNumber}`, token ? { token } : undefined),
+};
+
+export const settingsApi = {
+  // Business info, shipping rates and policy flags (whitelisted, no secrets).
+  public: () => api.get('/settings/public'),
 };
 
 export const paymentsApi = {
-  status: () =>
-    api.get('/payments/razorpay/status'),
+  // Which methods the checkout may offer (+ the public PayPal Client ID). No secrets.
+  methods: () => api.get('/payments/methods'),
 
-  createOrder: (orderId) =>
-    api.post('/payments/razorpay/order', {
-      orderId,
-    }),
+  // PayPal: the browser never sends an amount. The server prices the stored order.
+  paypalCreate: (orderId, accessToken) =>
+    api.post('/payments/paypal/order', { orderId, accessToken }),
 
-  verify: (payload) =>
-    api.post('/payments/razorpay/verify', payload),
+  paypalCapture: (orderId, paypalOrderId, accessToken) =>
+    api.post('/payments/paypal/capture', { orderId, paypalOrderId, accessToken }),
 };
 
 export const usersApi = {

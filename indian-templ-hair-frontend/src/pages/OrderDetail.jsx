@@ -66,7 +66,7 @@ export default function OrderDetail() {
                       <span className="min-w-0">
                         <Link to={`/product/${it.productId}`} className="block text-[0.95rem] font-medium text-espresso hover:text-walnut">{it.productName}</Link>
                         <span className="text-[0.82rem] text-muted">
-                          Qty {it.quantity}{it.variant?.length ? ` · ${it.variant.length}` : ''}{it.variant?.colour ? ` · ${it.variant.colour}` : ''}
+                          Qty {it.quantity}{it.variant?.length ? ` · ${it.variant.length}` : ''}{it.variant?.colour ? ` · ${it.variant.colour}` : ''}{it.variant?.texture ? ` · ${it.variant.texture}` : ''}{it.variant?.density ? ` · ${it.variant.density}` : ''}{it.variant?.laceType ? ` · ${it.variant.laceType}` : ''}
                         </span>
                       </span>
                       <span className="font-semibold tabular-nums">{rupee(it.total ?? it.finalPrice * it.quantity)}</span>
@@ -80,6 +80,7 @@ export default function OrderDetail() {
                   <h3 className="mb-3 text-[1.15rem]">Summary</h3>
                   <SummaryRows rows={[
                     { label: 'Subtotal', value: rupee(p.subtotal ?? 0) },
+                    p.tax > 0 && { label: 'Tax', value: rupee(p.tax) },
                     p.productDiscount > 0 && { label: 'Product discount', value: `−${rupee(p.productDiscount)}`, save: true },
                     p.couponDiscount > 0 && { label: 'Coupon', value: `−${rupee(p.couponDiscount)}`, save: true },
                     { label: 'Shipping', value: p.shippingCharge ? rupee(p.shippingCharge) : 'Free' },
@@ -94,7 +95,8 @@ export default function OrderDetail() {
                 )}
                 <div className={cx(cardCls, 'p-5 sm:p-6')}>
                   <h3 className="mb-2 flex items-center gap-2 text-[1.15rem]"><FiCreditCard size={16} className="text-gold" aria-hidden="true" /> Payment</h3>
-                  <p className="m-0 text-[0.9rem] capitalize text-muted">{order.payment?.method || '—'}{order.payment?.status ? ` · ${order.payment.status}` : ''}</p>
+                  <p className="m-0 text-[0.9rem] text-muted">{order.payment?.method === 'paypal' ? 'PayPal' : order.payment?.method === 'cod' ? 'Cash on Delivery' : (order.payment?.method || '—')}{order.payment?.status ? ` · ${order.payment.status.charAt(0).toUpperCase()}${order.payment.status.slice(1)}` : ''}</p>
+                  <p className="m-0 mt-1 text-[0.82rem] capitalize text-muted">Order status: {(order.orderStatus || '').replace(/_/g, ' ')}</p>
                 </div>
                 <Button to="/contact" variant="outline" block>Need help with this order?</Button>
               </div>

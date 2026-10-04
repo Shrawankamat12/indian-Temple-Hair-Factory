@@ -24,6 +24,7 @@ export function normalizeVariant(v) {
     mrp: v.mrp ?? v.unitPrice,
     discount: v.discount ?? 0,
     stock: v.stock,
+    isActive: v.isActive !== false,
     image: v.image || v.images?.[0] || v.gallery?.[0]?.url || v.gallery?.[0],
     images: v.images || (v.gallery || []).map((g) => (typeof g === 'string' ? g : g.url)).filter(Boolean),
   };
@@ -174,8 +175,11 @@ export function normalizeReview(r) {
   return {
     id: r._id,
     name: r.name,
+    title: r.title || '',
     rating: r.rating,
     comment: r.comment,
+    verified: !!r.verifiedPurchase,
+    reply: r.reply || '',
     date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
   };
 }

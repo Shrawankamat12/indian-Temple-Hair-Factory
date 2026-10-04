@@ -2,8 +2,6 @@ import { Link } from 'react-router-dom';
 import { FiArrowRight } from 'react-icons/fi';
 import CategoryCard from './CategoryCard';
 import Container from './Container';
-import { megaMenu } from '../data/content';
-import { resolveImageUrl } from '../lib/api';
 import { cx } from '../lib/ui';
 import catWigs from '../assets/photos/cat-wigs.jpg';
 import catBlonde from '../assets/photos/cat-blonde.jpg';
@@ -34,10 +32,7 @@ const QUICK_LINKS = [
 
 const heading = 'm-0 font-sans text-[0.74rem] font-bold uppercase tracking-[0.18em] text-walnut';
 
-/**
- * Shop mega menu. Uses live categories (linking to /shop?category=slug) when
- * available; falls back to the static menu from data/content.js.
- */
+/** Shop mega menu: built only from the live categories (linking to /shop?category=slug). */
 export default function MegaMenu({ categories = [], open, onNavigate, id }) {
   const tab = open ? 0 : -1;
   return (
@@ -82,26 +77,7 @@ export default function MegaMenu({ categories = [], open, onNavigate, id }) {
               </ul>
             </aside>
           </>
-        ) : (
-          <>
-            <div className="grid grid-cols-4 gap-7">
-              {megaMenu.map((col) => (
-                <div key={col.title}>
-                  <h4 className={cx(heading, 'mb-3.5')}>{col.title}</h4>
-                  <ul className="m-0 grid list-none gap-[9px] p-0">
-                    {col.items.map((it) => (
-                      <li key={it}><Link to="/shop" onClick={onNavigate} tabIndex={tab} className="text-[0.93rem] text-ink transition-colors hover:text-brand">{it}</Link></li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-            <Link to="/shop" onClick={onNavigate} tabIndex={tab} className="block">
-              <span className="block aspect-[4/5] overflow-hidden rounded-t-full"><img src={resolveImageUrl(megaMenu[0]?.img)} alt="" className="size-full object-cover" /></span>
-              <span className="mt-2.5 block text-center font-display text-[1.05rem]">Shop the collection</span>
-            </Link>
-          </>
-        )}
+        ) : null}
       </Container>
     </div>
   );

@@ -10,14 +10,16 @@ class WholesaleService extends BaseService {
   normalize(payload) {
     const body = { ...payload };
     if (body.companyName) { body.businessName = body.companyName; delete body.companyName; }
+    if (body.name && !body.contactName) { body.contactName = body.name; }
+    delete body.name;
     if (body.quantity !== undefined) { body.estimatedMOQ = body.quantity; delete body.quantity; }
-    if (body.status === 'declined') body.status = 'closed'; // admin's simplified vocabulary
+    if (body.status === 'declined') body.status = 'closed'; // legacy admin vocabulary
     return body;
   }
 
   decorate(doc) {
     const w = doc.toObject ? doc.toObject() : doc;
-    return { ...w, companyName: w.businessName, quantity: w.estimatedMOQ, status: w.status === 'closed' ? 'declined' : w.status };
+    return { ...w, companyName: w.businessName, name: w.contactName, quantity: w.estimatedMOQ };
   }
 
   async create(payload) {

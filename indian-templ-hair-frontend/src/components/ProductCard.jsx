@@ -36,7 +36,8 @@ export default function ProductCard({ product, onQuickView, view = 'grid', compa
   const soldOut = !product.hasVariants && product.stock === 0;
   const lowStock = !product.hasVariants && product.stock > 0 && product.stock <= 5;
   const list = view === 'list';
-  const showMetaRow = !compact && (product.rating > 0 || lowStock);
+  const hasReviews = product.reviews > 0 && product.rating > 0;
+  const reviewsHref = `${href}#reviews`;
 
   return (
     <article className={cx(
@@ -92,14 +93,19 @@ export default function ProductCard({ product, onQuickView, view = 'grid', compa
           <Link to={href} className="transition-colors hover:text-brand">{product.name}</Link>
         </h3>
 
-        {/* FIX: rating/stock row sirf tab dikhti hai jab data ho, warna title aur price ke beech faltu gap banta tha */}
-        {showMetaRow && (
-          <div className="flex min-h-[18px] items-center gap-2 text-[0.78rem] text-muted">
-            {product.rating > 0 && (
-              <>
+        {/* Review row (always visible on full cards): real rating + count, or a "Write a review" link when there are none yet. */}
+        {!compact && (
+          <div className="flex min-h-[18px] flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.78rem] text-muted">
+            {hasReviews ? (
+              <Link to={reviewsHref} className="inline-flex items-center gap-1.5 transition-colors hover:text-brand" aria-label={`${product.rating} out of 5 stars, ${product.reviews} reviews. Read reviews`}>
                 <StarRating value={product.rating} size={12} />
-                <span>{product.reviews > 0 ? `(${product.reviews})` : product.rating}</span>
-              </>
+                <span>({product.reviews})</span>
+              </Link>
+            ) : (
+              <Link to={reviewsHref} className="inline-flex items-center gap-1.5 transition-colors hover:text-brand">
+                <StarRating value={0} size={12} />
+                <span className="underline-offset-2 hover:underline">Write a review</span>
+              </Link>
             )}
             {lowStock && <span className="font-semibold text-sale">Only {product.stock} left</span>}
           </div>

@@ -73,6 +73,7 @@ const productSchema = new mongoose.Schema({
   variants: [{
     length: String, colour: String, texture: String, weight: String, density: String, laceType: String,
     sku: String, price: Number, stock: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true },
   }],
 }, { timestamps: true });
 

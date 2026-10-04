@@ -1,9 +1,18 @@
 const asyncHandler = require('express-async-handler');
 const reviewService = require('../services/review.service');
 
+// GET /api/v1/reviews/product/:productId?page=&limit=
+// `data` stays the plain array the storefront already reads; `summary` carries average / count / 1-5 star distribution.
 exports.getProductReviews = asyncHandler(async (req, res) => {
-  const reviews = await reviewService.getProductReviews(req.params.productId);
-  res.json({ success: true, data: reviews });
+  const { reviews, summary, page, pages } = await reviewService.getProductReviews(req.params.productId, req.query);
+  res.json({ success: true, data: reviews, summary, page, pages });
+});
+
+// GET /api/v1/reviews/product/:productId/eligibility — can the signed-in customer review this product?
+exports.getEligibility = asyncHandler(async (req, res) => {
+  const existing = await reviewService.repository.model.findOne({ product: req.params.productId, user: req.user._id }).select('status').lean();
+  const purchase = await reviewService.findPurchase(req.user._id, req.params.productId);
+  res.json({ success: true, data: { alreadyReviewed: !!existing, reviewStatus: existing?.status || null, verifiedPurchase: !!purchase } });
 });
 
 exports.createReview = asyncHandler(async (req, res) => {
@@ -35,6 +44,6 @@ exports.replyToReview = asyncHandler(async (req, res) => {
 });
 
 exports.deleteReview = asyncHandler(async (req, res) => {
-  await reviewService.deleteById(req.params.id);
+  await reviewService.deleteAdmin(req.params.id);
   res.json({ success: true, message: 'Review deleted' });
 });

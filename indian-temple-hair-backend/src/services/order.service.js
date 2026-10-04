@@ -3,7 +3,12 @@ const AppError = require('../utils/AppError');
 const { orderRepository, productRepository } = require('../repositories');
 const generateOrderNumber = require('../utils/generateOrderNumber');
 const couponService = require('./coupon.service');
-const inventoryService = require('./inventory.service');
+const paymentConfigService = require('./paymentConfig.service');
+const Product = require('../models/Product');
+const Setting = require('../models/Setting');
+const { priceLine, computeTotals } = require('./pricing.service');
+const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 class OrderService extends BaseService {
   constructor() {
@@ -11,149 +16,146 @@ class OrderService extends BaseService {
   }
 
   async createOrder(user, payload) {
-    const {
-      items,
-      billingAddress,
-      shippingAddress,
-      couponCode,
-      orderSource = 'Website',
-    } = payload;
+    const { items, billingAddress, shippingAddress, couponCode, orderSource = 'Website' } = payload;
 
-    // The storefront checkout sends payment method / shipping method as
-    // nested objects ({ payment: { method }, shipping: { method } }) rather
-    // than flat paymentMethod/shippingMethod fields — accept both shapes.
-    const paymentMethod = payload.paymentMethod || payload.payment?.method;
-    const shippingMethod = payload.shippingMethod || payload.shipping?.method;
+    // The storefront checkout sends payment method / shipping method as nested objects
+    // ({ payment: { method }, shipping: { method } }) rather than flat fields — accept both shapes.
+    const paymentMethod = payload.paymentMethod || payload.payment?.method || 'paypal';
+    const shippingMethod = payload.shippingMethod || payload.shipping?.method || 'standard';
 
-    if (!Array.isArray(items) || items.length === 0) {
-      throw new AppError('Order must contain at least one item', 400);
+    if (!Array.isArray(items) || items.length === 0) throw new AppError('Order must contain at least one item', 400);
+
+    // Only methods the business has actually enabled may be used (PayPal / COD); legacy gateway names are rejected.
+    const methods = await paymentConfigService.getPublicMethods();
+    if (paymentMethod === 'paypal' && !methods.paypal.enabled) throw new AppError('PayPal payment is not available right now', 400);
+    if (paymentMethod === 'cod' && !methods.cod.enabled) throw new AppError('Cash on delivery is not available', 400);
+    if (!['paypal', 'cod'].includes(paymentMethod)) throw new AppError('Please choose an available payment method', 400);
+
+    // --- Re-derive every line from the live Product record (price, variant, stock). The client only supplies
+    // productId, which variant, and quantity. ---
+    const lines = [];
+    for (const i of items) {
+      const productId = i.productId || i.product;
+      if (!productId || !mongoose.isValidObjectId(productId)) throw new AppError('Each item needs a productId', 400);
+      const product = await productRepository.findById(productId);
+      lines.push(priceLine(product, i));
+    }
+    // Merge duplicate product+variant lines so the stock check below sees the combined quantity.
+    const merged = [];
+    for (const l of lines) {
+      const hit = merged.find((m) => String(m.productId) === String(l.productId) && String(m.variantId || '') === String(l.variantId || ''));
+      if (hit) { hit.quantity += l.quantity; hit.total = Math.round(hit.finalPrice * hit.quantity * 100) / 100; } else merged.push({ ...l });
     }
 
-    // --- Re-derive every line item from the live Product record. The client
-    // only supplies productId, the descriptive variant snapshot, and the
-    // requested quantity — price, discount and totals are never trusted from
-    // the request body, they're recomputed here from the database. This also
-    // revalidates that each product still exists, is active, and has enough
-    // stock before the order is allowed to be placed. ---
-    const processedItems = await Promise.all(
-      items.map(async (i) => {
-        const productId = i.productId || i.product;
-        if (!productId) throw new AppError('Each item needs a productId', 400);
+    const setting = await Setting.findOne().lean();
+    const pre = computeTotals(merged, { setting, shippingMethod });
 
-        const product = await productRepository.findById(productId);
-        if (!product) throw new AppError(`A product in your cart no longer exists`, 400);
-        if (!product.isActive) throw new AppError(`"${product.name}" is currently unavailable`, 400);
-
-        const quantity = Math.max(1, Math.floor(Number(i.quantity ?? i.qty ?? 1)));
-        if (!Number.isFinite(quantity) || quantity < 1) {
-          throw new AppError(`Invalid quantity for "${product.name}"`, 400);
-        }
-        if ((product.stock || 0) < quantity) {
-          throw new AppError(
-            `Only ${product.stock || 0} unit(s) of "${product.name}" left in stock`,
-            409
-          );
-        }
-
-        // unitPrice = pre-discount price (MRP), discount = per-unit discount,
-        // finalPrice = actual selling price (product.price is always the
-        // authoritative selling price — see product.service.js normalize()).
-        const unitPrice = product.mrp ?? product.price;
-        const finalPrice = product.price;
-        const discount = Math.max(0, unitPrice - finalPrice);
-
-        return {
-          productId: product._id,
-          productName: product.name,
-          sku: product.sku,
-          image: product.images?.[0],
-          variant:
-            i.variant && typeof i.variant === 'object'
-              ? {
-                  length: i.variant.length,
-                  colour: i.variant.colour,
-                  texture: i.variant.texture,
-                  weight: i.variant.weight,
-                  density: i.variant.density,
-                  sku: i.variant.sku,
-                }
-              : undefined,
-          quantity,
-          unitPrice,
-          discount,
-          finalPrice,
-          total: finalPrice * quantity,
-        };
-      })
-    );
-
-    const subtotal = processedItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-    const productDiscount = processedItems.reduce((sum, i) => sum + i.discount * i.quantity, 0);
-
-    // Coupon: re-validated and re-priced server-side against the recomputed
-    // subtotal (expiry/usage-limit/min-order-value all checked again here) —
-    // never trust a couponDiscount figure sent by the client.
+    // Coupon is re-validated and re-priced server-side against the selling subtotal.
     let couponDiscount = 0;
     let appliedCouponCode;
     if (couponCode) {
-      const result = await couponService.recalculate(couponCode, subtotal);
+      const result = await couponService.recalculate(couponCode, pre.sellingSubtotal);
       couponDiscount = result.discount;
       appliedCouponCode = result.code;
     }
+    const totals = computeTotals(merged, { setting, shippingMethod, couponDiscount });
 
-    const shippingCharge = shippingMethod === 'express' ? 999 : subtotal > 15000 ? 0 : 499;
-    const grandTotal = Math.max(0, subtotal - productDiscount - couponDiscount + shippingCharge);
+    // Atomically reserve stock first; if the order can't be saved, give it back.
+    const reserved = await this.reserveStock(merged);
+    let order;
+    try {
+      const accessToken = crypto.randomBytes(24).toString('hex');
+      order = await this.repository.create({
+        user: user?._id || null,
+        isGuest: !user,
+        customerName: user?.name || shippingAddress?.fullName,
+        customerEmail: user?.email || shippingAddress?.email,
+        customerPhone: user?.phone || shippingAddress?.phone,
+        orderNumber: generateOrderNumber(),
+        orderSource,
+        orderStatus: 'pending',
+        items: merged,
+        billingAddress: billingAddress || shippingAddress,
+        shippingAddress,
+        pricing: {
+          subtotal: totals.subtotal,
+          productDiscount: totals.productDiscount,
+          couponCode: appliedCouponCode,
+          couponDiscount: totals.couponDiscount,
+          shippingCharge: totals.shippingCharge,
+          tax: totals.tax,
+          grandTotal: totals.grandTotal,
+        },
+        payment: { method: paymentMethod, status: 'pending' },
+        shipping: { method: shippingMethod },
+        customerNote: payload.customerNote,
+        isCOD: paymentMethod === 'cod',
+        accessToken,
+      });
+    } catch (err) {
+      await this.releaseStock(reserved);
+      throw err;
+    }
 
-    const order = await this.repository.create({
-      user: user?._id || null,
-      isGuest: !user,
-      customerName: user?.name || shippingAddress?.fullName,
-      customerEmail: user?.email || shippingAddress?.email,
-      customerPhone: user?.phone || shippingAddress?.phone,
+    // The access token is handed back exactly once, to whoever placed the order.
+    const out = order.toObject();
+    out.accessToken = order.accessToken;
+    return out;
+  }
 
-      orderNumber: generateOrderNumber(),
-      orderSource,
-      orderStatus: 'pending',
+  /** Atomic, conditional stock decrement (never goes below zero, never oversells under concurrency). */
+  async reserveStock(lines) {
+    const done = [];
+    try {
+      for (const l of lines) {
+        if (l.variantId) {
+          const r = await Product.updateOne(
+            { _id: l.productId, variants: { $elemMatch: { _id: l.variantId, stock: { $gte: l.quantity } } } },
+            { $inc: { 'variants.$.stock': -l.quantity } }
+          );
+          if (!r.modifiedCount) throw new AppError(`"${l.productName}" just sold out, please review your cart`, 409);
+          done.push(l);
+          await Product.updateOne({ _id: l.productId, stock: { $gte: l.quantity } }, { $inc: { stock: -l.quantity } }); // keep the aggregate in step when it is tracked
+        } else {
+          const r = await Product.updateOne({ _id: l.productId, stock: { $gte: l.quantity } }, { $inc: { stock: -l.quantity } });
+          if (!r.modifiedCount) throw new AppError(`"${l.productName}" just sold out, please review your cart`, 409);
+          done.push(l);
+        }
+      }
+    } catch (err) {
+      await this.releaseStock(done);
+      throw err;
+    }
+    return done;
+  }
 
-      items: processedItems,
+  async releaseStock(lines) {
+    for (const l of lines) {
+      if (l.variantId) {
+        await Product.updateOne({ _id: l.productId, 'variants._id': l.variantId }, { $inc: { 'variants.$.stock': l.quantity } }).catch(() => {});
+      }
+      await Product.updateOne({ _id: l.productId }, { $inc: { stock: l.quantity } }).catch(() => {});
+    }
+  }
 
-      billingAddress: billingAddress || shippingAddress,
-      shippingAddress,
+  /** Who may read / pay for an order: staff, the owning customer, or the holder of the checkout access token. */
+  canAccess(order, { user, token } = {}) {
+    if (user && (user.role === 'admin' || user.role === 'staff')) return true;
+    if (user && order.user && String(order.user._id || order.user) === String(user._id)) return true;
+    const stored = order.accessToken;
+    if (token && stored && token.length === stored.length) {
+      return crypto.timingSafeEqual(Buffer.from(String(token)), Buffer.from(String(stored)));
+    }
+    return false;
+  }
 
-      pricing: {
-        subtotal,
-        productDiscount,
-        couponCode: appliedCouponCode,
-        couponDiscount,
-        shippingCharge,
-        tax: 0,
-        grandTotal,
-      },
-
-      payment: {
-        method: paymentMethod || 'card',
-        status: 'pending',
-      },
-
-      shipping: {
-        method: shippingMethod || 'standard',
-      },
-
-      isCOD: paymentMethod === 'cod',
-    });
-
-    // Reserve stock immediately so two customers can't both check out the
-    // last unit while one of them is still on the payment screen. Best-effort
-    // (not run inside a DB transaction, consistent with the rest of this
-    // codebase's inventory handling) — logged the same way admin adjustments are.
-    await Promise.all(
-      processedItems.map((i) =>
-        inventoryService
-          .adjust(i.productId, { delta: -i.quantity, reason: 'order' }, user?._id)
-          .catch(() => {})
-      )
-    );
-
+  /** Loads an order for a payment call and enforces ownership. */
+  async getForCustomer(idOrNumber, ctx) {
+    const isId = mongoose.isValidObjectId(idOrNumber);
+    const order = await this.repository.model
+      .findOne(isId ? { _id: idOrNumber } : { orderNumber: String(idOrNumber) })
+      .select('+accessToken');
+    if (!order || !this.canAccess(order, ctx)) throw new AppError('Order not found', 404); // same answer either way: don't reveal which order numbers exist
     return order;
   }
 
@@ -162,7 +164,8 @@ class OrderService extends BaseService {
   }
 
   async getByIdOrOrderNumber(idOrNumber) {
-    const order = await this.repository.findOne({ $or: [{ _id: idOrNumber }, { orderNumber: idOrNumber }] });
+    const filter = mongoose.isValidObjectId(idOrNumber) ? { $or: [{ _id: idOrNumber }, { orderNumber: idOrNumber }] } : { orderNumber: idOrNumber };
+    const order = await this.repository.findOne(filter);
     if (!order) throw new AppError('Order not found', 404);
     return order;
   }
@@ -213,6 +216,7 @@ class OrderService extends BaseService {
       order.payment = order.payment || {};
       order.payment.status = paymentStatus;
       order.isPaid = paymentStatus === 'paid';
+      if (paymentStatus === 'paid' && !order.payment.paidAt) order.payment.paidAt = new Date();
     }
 
     await order.save(); // triggers the pre('save') hook that appends to statusHistory

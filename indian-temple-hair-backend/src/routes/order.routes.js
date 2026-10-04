@@ -6,6 +6,6 @@ const { createOrderRules } = require('../validators/order.validator');
 
 router.post('/', optionalAuth, createOrderRules, validate, createOrder);   // guest or logged-in — req.user set hoga agar login hai
 router.get('/my', protect, getMyOrders);
-router.get('/:id', getOrder);                                // also used for order tracking by orderNumber
+router.get('/:id', optionalAuth, getOrder);                   // owner, admin, or holder of the checkout access token (?token=)
 
 module.exports = router;

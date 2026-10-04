@@ -9,6 +9,7 @@ const STATUSES = [
   'pending',
   'placed',
   'confirmed',
+  'processing',
   'packed',
   'shipped',
   'out_for_delivery',

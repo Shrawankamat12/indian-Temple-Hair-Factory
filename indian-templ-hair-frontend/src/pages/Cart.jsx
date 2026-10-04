@@ -6,7 +6,7 @@ import SectionHeading from '../components/SectionHeading';
 import Button from '../components/Button';
 import { EmptyState } from '../components/StateBlocks';
 import { useStore } from '../context/StoreContext';
-import { useProducts } from '../hooks/useStoreData';
+import { useProducts, useCompanyInfo } from '../hooks/useStoreData';
 import { rupee } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
 import Container from '../components/Container';
@@ -16,21 +16,22 @@ import { SummaryCard, SummaryRows, SummaryTotal } from '../components/SummaryCar
 import { FormAlert } from '../components/Field';
 import { cx, linkU } from '../lib/ui';
 
-const FREE_SHIPPING_OVER = 15000;
-
 export default function Cart() {
   const { cart, removeFromCart, updateQty, cartSubtotal, cartMrpTotal, appliedCoupon, applyCoupon, clearCoupon, showError } = useStore();
   const [coupon, setCoupon] = useState('');
   const [applying, setApplying] = useState(false);
   const navigate = useNavigate();
+  const { company } = useCompanyInfo();
+  // Same figures the server uses (Admin → Settings → Shipping). Previously Cart showed 15, Checkout 15 and the order service 499.
+  const FREE_SHIPPING_OVER = company.shipping.freeShippingThreshold;
   const { products: suggestions } = useProducts({ limit: 12 });
   const alsoLike = suggestions.filter((p) => !cart.some((c) => c.id === p.id)).slice(0, 8);
 
   const discount = cartMrpTotal - cartSubtotal;
   const couponDiscount = appliedCoupon?.discount || 0;
-  const shipping = cart.length === 0 ? 0 : (cartSubtotal > FREE_SHIPPING_OVER ? 0 : 15);
+  const shipping = cart.length === 0 ? 0 : (FREE_SHIPPING_OVER > 0 && cartSubtotal > FREE_SHIPPING_OVER ? 0 : company.shipping.standardRate);
   const total = Math.max(0, cartSubtotal - couponDiscount) + shipping;
-  const toFree = Math.max(0, FREE_SHIPPING_OVER - cartSubtotal);
+  const toFree = FREE_SHIPPING_OVER > 0 ? Math.max(0, FREE_SHIPPING_OVER - cartSubtotal) : 0;
 
   async function handleApply() {
     if (!coupon.trim()) return;
@@ -45,7 +46,7 @@ export default function Cart() {
     }
   }
 
-  const freePct = Math.min(100, Math.round((cartSubtotal / FREE_SHIPPING_OVER) * 100));
+  const freePct = Math.min(100, FREE_SHIPPING_OVER > 0 ? Math.round((cartSubtotal / FREE_SHIPPING_OVER) * 100) : 0);
 
   return (
     <>
@@ -149,7 +150,11 @@ export default function Cart() {
                 <Button size="lg" block onClick={() => navigate('/checkout')}>Proceed to Checkout</Button>
 
                 <ul className="m-0 mt-[22px] grid list-none grid-cols-3 gap-2 border-t border-line p-0 pt-[18px] text-center">
-                  {[[FiLock, 'Secure', 'checkout'], [FiTruck, '24 hrs', 'from Delhi'], [FiRefreshCw, '7-day', 'returns']].map(([Icon, a, b]) => (
+                  {[
+                    [FiLock, 'Secure', 'checkout'],
+                    company.shipping.deliveryMaxDays > 0 && [FiTruck, `${company.shipping.deliveryMinDays}–${company.shipping.deliveryMaxDays} days`, 'delivery'],
+                    company.policy.returns && [FiRefreshCw, 'Returns', 'accepted'],
+                  ].filter(Boolean).map(([Icon, a, b]) => (
                     <li key={a} className="flex flex-col items-center gap-1.5 text-[0.74rem] leading-snug text-muted">
                       <Icon size={16} className="text-gold" aria-hidden="true" /><span>{a}<br />{b}</span>
                     </li>

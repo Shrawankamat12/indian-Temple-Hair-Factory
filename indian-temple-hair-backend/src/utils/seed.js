@@ -258,21 +258,11 @@ const policies = [
     { heading: "Shipping charges", body: "Standard shipping is charged at checkout. Orders above the free-shipping threshold ship free." },
     { heading: "Tracking", body: "You will receive tracking details by email and SMS once your order ships." },
   ] },
-  { slug: "returns", title: "Return & Refund Policy", sections: [
-    { heading: "Eligibility", body: "Unused, unopened products can be returned within 7 days of delivery." },
-    { heading: "How to return", body: "Contact us with your order number and photos. We will arrange pickup or share return instructions." },
-    { heading: "Refunds", body: "Approved refunds are processed to the original payment method within 5-7 business days of receiving the item." },
-    { heading: "Non-returnable items", body: "Used, altered or coloured hair products and custom-made orders cannot be returned." },
-  ] },
-  { slug: "cancellation", title: "Cancellation Policy", sections: [
-    { heading: "Before dispatch", body: "You can cancel an order any time before it is dispatched for a full refund." },
-    { heading: "After dispatch", body: "Once shipped, an order cannot be cancelled. You may use the return process after delivery." },
-    { heading: "Refund timeline", body: "Refunds for cancelled orders are processed to the original payment method within 5-7 business days." },
-  ] },
+  ...require("./defaultPolicies").clientPolicies,
   { slug: "privacy", title: "Privacy Policy", sections: [
     { heading: "Information we collect", body: "We collect the details you provide at checkout, account sign-up, contact and newsletter forms." },
     { heading: "How we use it", body: "To process orders, deliver products, provide support and, if you opt in, send updates." },
-    { heading: "Payments", body: "Card and UPI payments are handled by our payment gateway. We do not store your card details." },
+    { heading: "Payments", body: "Online payments are processed by PayPal. We never see or store your card or PayPal login details." },
     { heading: "Your choices", body: "You can request access, correction or deletion of your data by contacting us." },
   ] },
   { slug: "terms", title: "Terms of Service", sections: [

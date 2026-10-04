@@ -16,15 +16,16 @@ export function Badge({ tone = 'neutral', children, className = '' }) {
 }
 
 const STATUS_TONE = {
-  active: 'success', published: 'success', completed: 'success', delivered: 'success', paid: 'success', 'in stock': 'success', approved: 'success',
-  inactive: 'neutral', draft: 'neutral', placed: 'neutral',
-  pending: 'warning', low: 'warning', 'low stock': 'warning', processing: 'warning', confirmed: 'warning', packed: 'warning', shipped: 'warning',
+  active: 'success', published: 'success', completed: 'success', delivered: 'success', paid: 'success', 'in stock': 'success', approved: 'success', converted: 'success', replied: 'success',
+  inactive: 'neutral', draft: 'neutral', placed: 'neutral', hidden: 'neutral', closed: 'neutral', archived: 'neutral', new: 'brand', read: 'neutral',
+  pending: 'warning', contacted: 'warning', in_progress: 'warning', quoted: 'warning', out_for_delivery: 'warning', low: 'warning', 'low stock': 'warning', processing: 'warning', confirmed: 'warning', packed: 'warning', shipped: 'warning',
   cancelled: 'danger', rejected: 'danger', 'out of stock': 'danger', failed: 'danger', banned: 'danger', returned: 'danger',
 };
 
 export function StatusBadge({ status }) {
   const s = String(status || '').toLowerCase();
-  return <Badge tone={STATUS_TONE[s] || 'neutral'}>{status}</Badge>;
+  const label = String(status || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+  return <Badge tone={STATUS_TONE[s] || 'neutral'}>{label}</Badge>;
 }
 
 export function Spinner({ className = 'h-5 w-5' }) {

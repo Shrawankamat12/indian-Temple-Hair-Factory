@@ -2,6 +2,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { FiInstagram, FiFacebook, FiYoutube, FiMapPin, FiMail, FiPhone, FiClock } from 'react-icons/fi';
 import { FaWhatsapp, FaPinterestP, FaTiktok, FaLinkedinIn, FaCcVisa, FaCcMastercard, FaRupeeSign } from 'react-icons/fa';
 import { useSiteContent, useCompanyInfo } from '../hooks/useStoreData';
+import { useAsync } from '../hooks/useAsync';
+import { paymentsApi } from '../lib/resources';
 import NewsletterForm from './NewsletterForm';
 import BrandMark from './BrandMark';
 import Container from './Container';
@@ -25,11 +27,10 @@ const DEFAULT_COLUMNS = [
   { title: 'Customer Care', links: [{ label: 'My Account', url: '/account' }, { label: 'FAQs', url: '/faq' }, { label: 'Contact', url: '/contact' }] },
   { title: 'About Us', links: [{ label: 'Our Story', url: '/about' }, { label: 'Our Process', url: '/factory' }, { label: 'Wholesale', url: '/wholesale' }, { label: 'Journal', url: '/journal' }] },
   { title: 'Policies', links: [
-    { label: 'Shipping Policy', url: '/policy/shipping' }, { label: 'Return & Refund', url: '/policy/returns' },
+    { label: 'Shipping Policy', url: '/policy/shipping' }, { label: 'Return Policy', url: '/policy/returns' }, { label: 'Refund Policy', url: '/policy/refund' },
     { label: 'Cancellation', url: '/policy/cancellation' }, { label: 'Privacy Policy', url: '/policy/privacy' }, { label: 'Terms', url: '/policy/terms' },
   ] },
 ];
-const DEFAULT_PAYMENTS = ['Visa', 'Mastercard', 'UPI', 'Cash on Delivery'];
 
 const SOCIAL_ICONS = [
   { key: 'instagram', label: 'Instagram', Icon: FiInstagram },
@@ -70,7 +71,11 @@ export default function Footer() {
   const { pathname } = useLocation();
   const footer = sc?.footer || {};
   const columns = footer.columns?.length ? footer.columns : DEFAULT_COLUMNS;
-  const payments = footer.paymentMethods?.length ? footer.paymentMethods : DEFAULT_PAYMENTS;
+  // "We accept": the admin's list wins; otherwise show only what checkout really offers right now.
+  const { data: methodsRes } = useAsync(() => paymentsApi.methods(), []);
+  const live = methodsRes?.data;
+  const livePayments = [live?.paypal?.enabled && 'PayPal', live?.cod?.enabled && 'Cash on Delivery'].filter(Boolean);
+  const payments = footer.paymentMethods?.length ? footer.paymentMethods : livePayments;
   const social = company.socialLinks;
   const hasSocial = SOCIAL_ICONS.some((i) => social[i.key]);
   const { brandDescription, address, email, phones, businessHours } = company;
@@ -145,17 +150,19 @@ export default function Footer() {
         </div>
       </Container>
 
-      <Container>
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-champagne/20 py-5">
-          <span className="text-[0.72rem] font-bold uppercase tracking-[0.16em] text-champagne">We accept</span>
-          <div className="flex flex-wrap items-center gap-2">{payments.map((p) => <PaymentChip key={p} label={p} />)}</div>
-        </div>
-      </Container>
+      {payments.length > 0 && (
+        <Container>
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-champagne/20 py-5">
+            <span className="text-[0.72rem] font-bold uppercase tracking-[0.16em] text-champagne">We accept</span>
+            <div className="flex flex-wrap items-center gap-2">{payments.map((p) => <PaymentChip key={p} label={p} />)}</div>
+          </div>
+        </Container>
+      )}
 
       <div className="border-t border-champagne/20 bg-black/20">
         <Container className="flex flex-col items-center gap-x-6 gap-y-2 py-5 text-center text-[0.8rem] sm:flex-row sm:flex-wrap sm:justify-between sm:text-left">
           <span>© {new Date().getFullYear()} {company.brandName}. All rights reserved.</span>
-          <span>{stripGst(footer.bottomText) || 'Shipped worldwide from New Delhi, India'}</span>
+          {stripGst(footer.bottomText) && <span>{stripGst(footer.bottomText)}</span>}
         </Container>
       </div>
 

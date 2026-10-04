@@ -11,7 +11,7 @@ import Container from '../components/Container';
 import { Field, Input, Textarea } from '../components/Field';
 import { cardCls, cx } from '../lib/ui';
 
-const emptyForm = { name: '', email: '', subject: '', message: '' };
+const emptyForm = { name: '', email: '', phone: '', subject: '', message: '', enquiryType: 'general' };
 
 export function InfoCard({ icon, title, children }) {
   return (
@@ -28,8 +28,8 @@ export default function Contact() {
   const [sent, setSent] = useState(false);
   const { showError } = useStore();
   const { company } = useCompanyInfo();
-  const cleanPhone = company.phones[0].replace(/[\s()-]+/g, '');
-  const mapQuery = encodeURIComponent(company.address);
+    const mapQuery = encodeURIComponent(company.address);
+  const mapSrc = company.address ? `https://www.google.com/maps?q=${mapQuery}&output=embed` : '';
 
   function field(key) {
     return { value: form[key], onChange: (e) => setForm((f) => ({ ...f, [key]: e.target.value })) };
@@ -56,10 +56,15 @@ export default function Contact() {
       <Reveal as="section" className="py-9 sm:py-12 lg:py-16">
         <Container className="grid items-stretch gap-[clamp(28px,4vw,44px)] md:grid-cols-[1fr_1.05fr]">
           <div className="flex flex-col">
-            <InfoCard icon={<FiMapPin size={18} />} title="Factory address">{company.address}</InfoCard>
+            {company.addressLines.length > 0 && (
+              <InfoCard icon={<FiMapPin size={18} />} title="Address">
+                {company.addressLines.map((line) => <span key={line} className="block">{line}</span>)}
+                {company.googleMapsUrl && <a href={company.googleMapsUrl} target="_blank" rel="noreferrer" className={cx(infoLine, 'font-semibold text-walnut underline underline-offset-2')}>Open in Google Maps</a>}
+              </InfoCard>
+            )}
 
             <InfoCard icon={<FiPhone size={18} />} title="Phone & email">
-              <span className="block">{company.contactPerson}</span>
+              {company.contactPerson && <span className="block">{company.contactPerson}</span>}
               {company.phones.map((phone) => {
                 const clean = phone.replace(/[\s()-]+/g, '');
                 return <a key={phone} href={`tel:${clean}`} className={infoLine}>{phone}</a>;
@@ -69,21 +74,21 @@ export default function Contact() {
 
             {company.gst && <InfoCard icon={<FiFileText size={18} />} title="GST">{company.gst}</InfoCard>}
 
-            <InfoCard icon={<FiClock size={18} />} title="Business hours">
-              {company.businessHours}<br />Closed on national holidays
-            </InfoCard>
+            {company.businessHours && (
+              <InfoCard icon={<FiClock size={18} />} title="Business hours">{company.businessHours}</InfoCard>
+            )}
 
-            <a href={`https://wa.me/${cleanPhone.replace(/^\+/, '')}`} target="_blank" rel="noreferrer" className="mb-[18px] flex items-center justify-center gap-2.5 rounded-md bg-[#25d366] px-5 py-3.5 font-semibold text-white transition-colors hover:bg-[#1ebe5b]">
+            <a href={`https://wa.me/${(company.whatsapp || company.phones[0]).replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" className="mb-[18px] flex items-center justify-center gap-2.5 rounded-md bg-[#25d366] px-5 py-3.5 font-semibold text-white transition-colors hover:bg-[#1ebe5b]">
               <FaWhatsapp size={18} aria-hidden="true" /> Chat on WhatsApp
             </a>
 
-            <div className="min-h-[220px] flex-1 overflow-hidden rounded-lg border border-line">
+            {mapSrc && <div className="min-h-[220px] flex-1 overflow-hidden rounded-lg border border-line">
               <iframe
-                title={`${company.brandName} location`} src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
+                title={`${company.brandName} location`} src={mapSrc}
                 width="100%" height="100%" className="block min-h-[220px] border-0"
                 loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen
               />
-            </div>
+            </div>}
           </div>
 
           <div className={cx(cardCls, 'flex flex-col p-5 sm:p-8')}>
@@ -102,6 +107,7 @@ export default function Contact() {
                 </div>
                 <Field label="Full name" htmlFor="c-name"><Input id="c-name" placeholder="Enter your full name" required {...field('name')} /></Field>
                 <Field label="Email address" htmlFor="c-email"><Input id="c-email" type="email" placeholder="you@example.com" required {...field('email')} /></Field>
+                <Field label="Phone (optional)" htmlFor="c-phone"><Input id="c-phone" type="tel" placeholder="+91 …" {...field('phone')} /></Field>
                 <Field label="Subject" htmlFor="c-subject"><Input id="c-subject" placeholder="What's this about?" {...field('subject')} /></Field>
                 <Field label="Message" htmlFor="c-message"><Textarea id="c-message" rows="6" placeholder="Tell us a bit more…" required {...field('message')} /></Field>
                 <Button type="submit" size="lg" loading={submitting}>{submitting ? 'Sending…' : 'Send message'}</Button>

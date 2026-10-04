@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { FiX, FiSearch, FiUser, FiHeart } from 'react-icons/fi';
-import { megaMenu } from '../data/content';
 import BrandMark from './BrandMark';
 import Overlay from './Overlay';
 import { cx, iconBtn } from '../lib/ui';
@@ -66,13 +65,9 @@ export default function MobileMenu({ open, onClose, links, categories = [], user
           <h4 className="mb-3 font-sans text-[0.7rem] font-bold uppercase tracking-[0.16em] text-champagne">Shop by category</h4>
           <ul className="m-0 grid list-none gap-1 p-0">
             <li><Link to="/shop?onSale=1" onClick={onClose} tabIndex={tab} className="block py-2 text-[0.95rem] font-semibold text-[#f0a5b2] hover:text-champagne">Offers</Link></li>
-            {categories.length > 0
-              ? categories.map((c) => (
-                <li key={c.id || c.slug}><Link to={`/shop?category=${c.slug}`} onClick={onClose} tabIndex={tab} className="block py-2 text-[0.95rem] text-cream/70 hover:text-champagne">{c.name}</Link></li>
-              ))
-              : megaMenu.map((c) => (
-                <li key={c.title}><Link to="/shop" onClick={onClose} tabIndex={tab} className="block py-2 text-[0.95rem] text-cream/70 hover:text-champagne">{c.title}</Link></li>
-              ))}
+            {categories.map((c) => (
+              <li key={c.id || c.slug}><Link to={`/shop?category=${c.slug}`} onClick={onClose} tabIndex={tab} className="block py-2 text-[0.95rem] text-cream/70 hover:text-champagne">{c.name}</Link></li>
+            ))}
           </ul>
         </div>
 

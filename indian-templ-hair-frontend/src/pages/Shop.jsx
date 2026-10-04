@@ -68,12 +68,15 @@ export default function Shop() {
   const [onSale, setOnSale] = useState(false);
   const [view, setView] = useState('grid');
   const [rating, setRating] = useState(null);
-  const [maxPrice, setMaxPrice] = useState(35000);
+  const [maxPrice, setMaxPrice] = useState(null); // null = no limit; the slider ceiling comes from the real catalogue
   const [sort, setSort] = useState('featured');
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [page, setPage] = useState(1);
 
+  // Price slider ceiling = the dearest real product (rounded up), not a made-up number.
+  const priceCeiling = useMemo(() => Math.ceil(Math.max(0, ...products.map((p) => Number(p.price) || 0)) / 500) * 500, [products]);
+  const priceActive = maxPrice !== null && maxPrice < priceCeiling;
   const activeCategory = categories.find((c) => c.id === cat);
   const { subcategories } = useSubCategories(activeCategory?._id);
 
@@ -104,11 +107,11 @@ export default function Shop() {
     setCat(null); setSubCat(null); setBrand(null); setCollection(null);
     setHairType(null); setTexture(null); setLength(null);
     setColor(null); setLaceType(null); setDensity(null); setOnSale(false);
-    setRating(null); setMaxPrice(35000); setSort('featured');
+    setRating(null); setMaxPrice(null); setSort('featured');
   }
 
   const activeFilterCount = [cat, subCat, brand, collection, hairType, texture, length, color, laceType, density, rating, onSale].filter(Boolean).length
-    + (maxPrice < 35000 ? 1 : 0);
+    + (priceActive ? 1 : 0);
 
   const filtered = useMemo(() => {
     let list = products.filter((p) => {
@@ -124,7 +127,7 @@ export default function Shop() {
       if (length && !LENGTHS.find((l) => l.id === length).test(p.length)) return false;
       if (color && p.color !== color) return false;
       if (rating && p.rating < rating) return false;
-      if (p.price > maxPrice) return false;
+      if (maxPrice !== null && p.price > maxPrice) return false;
       return true;
     });
     if (sort === 'price-asc') list = [...list].sort((a, b) => a.price - b.price);
@@ -140,7 +143,7 @@ export default function Shop() {
 
   const panelProps = {
     data: { categories, subcategories, brands, collections, hairTypeAttrs, textureAttrs, colorAttrs, laceAttrs, densityAttrs },
-    state: { cat, subCat, brand, collection, hairType, texture, length, color, laceType, density, rating, maxPrice },
+    state: { cat, subCat, brand, collection, hairType, texture, length, color, laceType, density, rating, maxPrice: maxPrice ?? priceCeiling, priceCeiling },
     set: { cat: setCat, subCat: setSubCat, brand: setBrand, collection: setCollection, hairType: setHairType, texture: setTexture, length: setLength, color: setColor, laceType: setLaceType, density: setDensity, rating: setRating, maxPrice: setMaxPrice },
     activeCount: activeFilterCount, onReset: reset, lengths: LENGTHS,
     onApply: () => { setFiltersOpen(false); document.getElementById('shop-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
@@ -156,7 +159,7 @@ export default function Shop() {
     density && { label: `${density} density`, clear: () => setDensity(null) },
     onSale && { label: 'On offer', clear: () => setOnSale(false) },
     rating && { label: `${rating}+ stars`, clear: () => setRating(null) },
-    maxPrice < 35000 && { label: `Up to ₹${maxPrice.toLocaleString('en-IN')}`, clear: () => setMaxPrice(35000) },
+    priceActive && { label: `Up to ₹${maxPrice.toLocaleString('en-IN')}`, clear: () => setMaxPrice(null) },
   ].filter(Boolean);
 
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -167,7 +170,7 @@ export default function Shop() {
   const topBanner = topBanners[0];
   const bannerImage = imageOr(activeCategory?.banner) || imageOr(topBanner?.img) || imageOr(activeCategory?.image);
   const bannerTitle = activeCategory?.name || topBanner?.title || 'The Complete Collection';
-  const bannerLede = (activeCategory ? (activeCategory.tag || activeCategory.description) : topBanner?.subtitle) || 'Virgin, remy & raw hair, hand-inspected at our Delhi factory.';
+  const bannerLede = (activeCategory ? (activeCategory.tag || activeCategory.description) : topBanner?.subtitle) || '';
 
   const pagerBtn = 'inline-flex h-[38px] min-w-[38px] items-center justify-center rounded-md border border-line bg-white px-2.5 text-[0.85rem] font-semibold text-espresso transition hover:enabled:border-brand hover:enabled:text-brand disabled:cursor-default disabled:opacity-40 aria-[current=page]:border-brand aria-[current=page]:bg-brand aria-[current=page]:text-white';
 

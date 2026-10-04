@@ -16,12 +16,14 @@ const orderItemSchema = new Schema(
     sku: { type: String, trim: true },
     image: { type: String },
 
+    variantId: { type: Schema.Types.ObjectId },
     variant: {
       length: String,
       colour: String,
       texture: String,
       weight: String,
       density: String,
+      laceType: String,
       sku: String,
     },
 
@@ -120,6 +122,7 @@ const orderSchema = new Schema(
         'pending',
         'placed',
         'confirmed',
+        'processing',
         'packed',
         'shipped',
         'out_for_delivery',
@@ -162,19 +165,32 @@ const orderSchema = new Schema(
     payment: {
       method: {
         type: String,
-        enum: ['card', 'upi', 'netbanking', 'wallet', 'cod'],
-        default: 'card',
+        enum: ['paypal', 'card', 'upi', 'netbanking', 'wallet', 'cod'],
+        default: 'paypal',
       },
       status: {
         type: String,
-        enum: ['pending', 'paid', 'failed', 'refunded', 'partially_refunded'],
+        enum: ['pending', 'processing', 'paid', 'failed', 'cancelled', 'refunded', 'partially_refunded'],
         default: 'pending',
       },
+      // Amount actually charged by the gateway (may be in a different currency than the INR catalogue).
+      amount: { type: Number },
+      currency: { type: String },
+      exchangeRate: { type: Number }, // INR per 1 unit of `currency` used at order time (null when currency is INR)
+      paidAt: { type: Date },
+      failureReason: { type: String },
       transactionId: { type: String },
+      paypalOrderId: { type: String, index: true, sparse: true },
+      paypalCaptureId: { type: String, index: true, sparse: true },
+      lastEventId: { type: String },
       razorpayOrderId: { type: String },
       razorpayPaymentId: { type: String },
       razorpaySignature: { type: String },
     },
+
+    // Random token returned once at checkout so a guest can pay / look up THEIR order.
+    // Never selected by default, never sent in list/detail responses.
+    accessToken: { type: String, select: false },
 
     /* ---------------- Shipping ---------------- */
     shipping: {

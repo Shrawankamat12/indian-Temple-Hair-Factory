@@ -16,8 +16,10 @@ exports.getMyOrders = asyncHandler(async (req, res) => {
 
 // GET /api/v1/orders/:id  (id can be Mongo _id or human orderNumber)
 exports.getOrder = asyncHandler(async (req, res) => {
-  const order = await orderService.getByIdOrOrderNumber(req.params.id);
-  res.json({ success: true, data: order });
+  const order = await orderService.getForCustomer(req.params.id, { user: req.user, token: req.query.token });
+  const out = order.toObject();
+  delete out.accessToken;
+  res.json({ success: true, data: out });
 });
 
 exports.getAllOrders = asyncHandler(async (req, res) => {

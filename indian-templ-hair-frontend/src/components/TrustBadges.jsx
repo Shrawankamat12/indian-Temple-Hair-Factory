@@ -2,10 +2,6 @@ import { useSiteContent } from '../hooks/useStoreData';
 import BadgeIcon from './BadgeIcon';
 import { cx } from '../lib/ui';
 
-// Fallbacks only when the admin has not set any hero badges. Each is backed by store behaviour:
-// free shipping above ₹15,000 (order service), COD toggle (settings), 7-day returns, Razorpay.
-const DEFAULT_LABELS = ['100% Human Hair', 'Free Shipping above ₹15,000', 'Cash on Delivery', 'Easy 7-Day Returns', 'Secure Payments'];
-
 /**
  * Row of icon pills. Labels come from Website Content → Hero Banner → Badges
  * (or the `labels` prop); the icon is picked by keyword so the admin never touches code.
@@ -13,8 +9,9 @@ const DEFAULT_LABELS = ['100% Human Hair', 'Free Shipping above ₹15,000', 'Cas
  */
 export default function TrustBadges({ labels, className = '', max = 5, variant = 'pills' }) {
   const { siteContent } = useSiteContent();
-  const list = (labels?.length ? labels : siteContent?.hero?.badges?.length ? siteContent.hero.badges : DEFAULT_LABELS)
+  const list = (labels?.length ? labels : siteContent?.hero?.badges || [])
     .filter(Boolean).slice(0, max);
+  if (list.length === 0) return null;
   const strip = variant === 'strip';
   return (
     <ul className={cx(

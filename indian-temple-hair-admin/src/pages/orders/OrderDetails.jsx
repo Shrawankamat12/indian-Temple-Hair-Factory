@@ -10,6 +10,7 @@ const STATUS_FLOW = [
   'pending',
   'placed',
   'confirmed',
+  'processing',
   'packed',
   'shipped',
   'out_for_delivery',
@@ -171,8 +172,14 @@ export default function OrderDetails() {
           </Card>
           <Card title="Payment">
             <div className="flex flex-col gap-2 text-[13px]">
-              <Row k="Method" v={order.payment?.method || '—'} />
+              <Row k="Method" v={order.payment?.method === 'paypal' ? 'PayPal' : order.payment?.method === 'cod' ? 'Cash on Delivery' : (order.payment?.method || '—')} />
               <Row k="Status" v={<StatusBadge status={order.payment?.status || 'pending'} />} />
+              {order.payment?.amount != null && <Row k="Charged" v={`${order.payment.amount} ${order.payment.currency || ''}`.trim()} />}
+              {order.payment?.exchangeRate ? <Row k="Rate used" v={`₹${order.payment.exchangeRate} per ${order.payment.currency}`} /> : null}
+              {order.payment?.paypalOrderId && <Row k="PayPal Order ID" v={<span className="break-all">{order.payment.paypalOrderId}</span>} />}
+              {order.payment?.paypalCaptureId && <Row k="PayPal Capture ID" v={<span className="break-all">{order.payment.paypalCaptureId}</span>} />}
+              {order.payment?.paidAt && <Row k="Paid at" v={formatDateTime(order.payment.paidAt)} />}
+              {order.payment?.failureReason && <Row k="Failure" v={order.payment.failureReason} />}
             </div>
           </Card>
         </div>

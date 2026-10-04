@@ -24,7 +24,7 @@ export default function ContactMessages() {
   const submitReply = async () => {
     try { await contactApi.update(viewing._id || viewing.id, { status: 'replied', reply }); } catch {}
     await entity.update(viewing._id || viewing.id, { status: 'replied', reply });
-    toast.success('Reply sent');
+    toast.success('Reply saved (it is not emailed — contact the customer directly)');
     setViewing(null); setReply('');
   };
 
@@ -32,16 +32,16 @@ export default function ContactMessages() {
     <div>
       <EntityListPage title="Contact Messages" subtitle="Messages submitted through the storefront contact form." entity={entity} columns={columns}
         onView={(row) => { setViewing(row); setReply(row.reply || ''); }} exportFilename="contact-messages"
-        filterOptions={[{ key: 'status', label: 'Status', options: [{ value: 'new', label: 'New' }, { value: 'replied', label: 'Replied' }] }]}
-        statusOptions={[{ value: 'replied', label: 'Replied' }]} />
+        filterOptions={[{ key: 'status', label: 'Status', options: ['new', 'read', 'contacted', 'in_progress', 'replied', 'converted', 'closed'].map((v) => ({ value: v, label: v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) })) }]}
+        statusOptions={['read', 'contacted', 'in_progress', 'replied', 'converted', 'closed'].map((v) => ({ value: v, label: v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) }))} />
 
       <Drawer open={!!viewing} onClose={() => setViewing(null)} title={viewing?.subject || 'Message'} footer={<>
         <Button variant="secondary" onClick={() => setViewing(null)}>Close</Button>
-        <Button onClick={submitReply}>Send Reply</Button>
+        <Button onClick={submitReply}>Save Reply</Button>
       </>}>
         {viewing && (
           <div className="flex flex-col gap-4">
-            <div className="text-[13px]"><span className="font-semibold">{viewing.name}</span> · {viewing.email}</div>
+            <div className="text-[13px]"><span className="font-semibold">{viewing.name}</span> · {viewing.email}{viewing.phone ? ` · ${viewing.phone}` : ''}</div>
             <p className="text-[13.5px] text-ink-muted bg-surface-muted rounded-md p-3">{viewing.message}</p>
             <Textarea rows={5} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Type your reply…" />
           </div>

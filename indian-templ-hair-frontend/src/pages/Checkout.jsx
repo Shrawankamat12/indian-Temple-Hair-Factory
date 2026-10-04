@@ -18,7 +18,8 @@ import Button from '../components/Button';
 import { useStore } from '../context/StoreContext';
 import { rupee } from '../lib/format';
 import { ordersApi, paymentsApi } from '../lib/resources';
-import { openRazorpayCheckout } from '../lib/razorpay';
+import PayPalButtons from '../components/PayPalButtons';
+import { useAsync } from '../hooks/useAsync';
 import { resolveImageUrl } from '../lib/api';
 import { useCompanyInfo } from '../hooks/useStoreData';
 import Container from '../components/Container';
@@ -48,45 +49,13 @@ const STEPS = [
 ];
 
 /*
- * Payment options shown on YOUR checkout page.
- *
- * Razorpay will show the actual payment UI after
- * the customer clicks "Place Order".
- *
- * COD is handled by our store and does not use Razorpay.
+ * Payment options come from the server (Admin → Settings → Payments / Shipping):
+ * PayPal only when enabled and fully configured, COD only when the admin allows it.
  */
-const PAYMENT_OPTIONS = [
-  {
-    id: 'card',
-    title: 'Credit / Debit Card',
-    sub: 'Visa, Mastercard, RuPay, Amex accepted',
-    icon: FiCreditCard,
-  },
-  {
-    id: 'upi',
-    title: 'UPI',
-    sub: 'Google Pay, PhonePe, Paytm, BHIM & more',
-    icon: FiSmartphone,
-  },
-  {
-    id: 'netbanking',
-    title: 'Netbanking',
-    sub: 'All major Indian banks supported',
-    icon: FiGlobe,
-  },
-  {
-    id: 'wallet',
-    title: 'Wallets',
-    sub: 'Available wallets shown by Razorpay',
-    icon: FiBriefcase,
-  },
-  {
-    id: 'cod',
-    title: 'Cash on Delivery',
-    sub: 'Pay when your order arrives',
-    icon: FiPackage,
-  },
-];
+const ALL_OPTIONS = {
+  paypal: { id: 'paypal', title: 'PayPal', sub: 'Pay securely with PayPal or a debit / credit card', icon: FiCreditCard },
+  cod: { id: 'cod', title: 'Cash on Delivery', sub: 'Pay when your order arrives', icon: FiPackage },
+};
 
 const emptyAddress = {
   fullName: '',
@@ -120,7 +89,20 @@ export default function Checkout() {
 
   const [shipMethod, setShipMethod] = useState('standard');
 
-  const [payMethod, setPayMethod] = useState('card');
+  const { data: methodsRes, loading: methodsLoading, error: methodsError } = useAsync(() => paymentsApi.methods(), []);
+  const methods = methodsRes?.data;
+  const PAYMENT_OPTIONS = [methods?.paypal?.enabled && ALL_OPTIONS.paypal, methods?.cod?.enabled && ALL_OPTIONS.cod].filter(Boolean);
+
+  const [payMethod, setPayMethod] = useState('');
+
+  // The order exists on the server once the shopper reaches PayPal. Kept so a cancelled/failed attempt
+  // retries the SAME order instead of creating duplicates.
+  const [pending, setPending] = useState(null); // { orderId, orderNumber, accessToken, total }
+
+  useEffect(() => {
+    if (!payMethod && PAYMENT_OPTIONS.length) setPayMethod(PAYMENT_OPTIONS[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [methods]);
 
   const [placing, setPlacing] = useState(false);
 
@@ -180,12 +162,14 @@ export default function Checkout() {
   /*
    * Shipping calculation.
    */
+  // Display estimate only — the server recomputes shipping from Admin → Settings and its figure is final.
+  const { standardRate, expressRate, freeShippingThreshold } = company.shipping;
   const shippingCost =
     shipMethod === 'express'
-      ? 999
-      : cartSubtotal > 15000
+      ? expressRate
+      : freeShippingThreshold > 0 && cartSubtotal > freeShippingThreshold
       ? 0
-      : 15;
+      : standardRate;
 
   /*
    * Coupon discount.
@@ -221,223 +205,70 @@ export default function Checkout() {
     );
   }
 
+  function finish(orderNumber) {
+    clearCart();
+    clearCoupon();
+    navigate('/order-confirmation', { state: { orderNumber, paid: payMethod === 'paypal' } });
+  }
+
   /*
-   * Create order + Razorpay payment.
+   * Create OUR order. Only ids, the chosen variant and quantities are sent — the server looks up prices,
+   * stock, shipping, coupon and tax itself and returns the authoritative total.
    */
   async function placeOrder() {
     if (placing) return;
-
     setPlacing(true);
     setFormError('');
-
     try {
-      /*
-       * Create our own store order first.
-       */
       const res = await ordersApi.create({
         customerName: address.fullName,
-
         customerEmail: address.email,
-
         customerPhone: address.phone,
-
-        items: cart.map((item) => {
-          const unitPrice =
-            item.mrp && item.mrp > item.price
-              ? item.mrp
-              : item.price;
-
-          const discountPerUnit = unitPrice - item.price;
-
-          return {
-            productId: item.id,
-
-            productName: item.name,
-
-            sku: item.sku || item.id,
-
-            image: item.image,
-
-            variant: {
-              length: item.length
-                ? `${item.length} inch`
-                : undefined,
-
-              colour: item.color || undefined,
-
-              texture: item.hairType || undefined,
-            },
-
-            quantity: item.qty,
-
-            unitPrice,
-
-            discount: discountPerUnit * item.qty,
-
-            finalPrice: item.price,
-
-            total: item.price * item.qty,
-          };
-        }),
-
-        billingAddress: {
-          ...address,
-          line2: address.line2 || '',
-          landmark: address.landmark || '',
-        },
-
-        shippingAddress: {
-          ...address,
-          line2: address.line2 || '',
-          landmark: address.landmark || '',
-        },
-
-        pricing: {
-          subtotal: cartMrpTotal,
-
-          productDiscount:
-            cartMrpTotal - cartSubtotal,
-
-          couponDiscount: discountAmount,
-
-          shippingCharge: shippingCost,
-
-          tax: 0,
-
-          grandTotal: total,
-        },
-
-        payment: {
-          method: payMethod,
-        },
-
-        shipping: {
-          method: shipMethod,
-        },
-
+        items: cart.map((item) => ({
+          productId: item.id,
+          variantId: item.variantId || undefined,
+          variantSku: item.variantSku || undefined,
+          variant: {
+            length: item.length ? String(item.length) : undefined,
+            colour: item.color || undefined,
+            laceType: item.laceType || undefined,
+            density: item.density || undefined,
+          },
+          quantity: item.qty,
+        })),
+        billingAddress: { ...address, line2: address.line2 || '', landmark: address.landmark || '' },
+        shippingAddress: { ...address, line2: address.line2 || '', landmark: address.landmark || '' },
+        payment: { method: payMethod },
+        shipping: { method: shipMethod },
         couponCode: appliedCoupon?.code,
       });
-
       const order = res.data;
 
-      /*
-       * COD
-       *
-       * No Razorpay payment required.
-       */
       if (payMethod === 'cod') {
-        clearCart();
-
-        clearCoupon();
-
-        navigate('/order-confirmation', {
-          state: {
-            orderNumber: order.orderNumber,
-          },
-        });
-
+        finish(order.orderNumber);
         return;
       }
-
-      /*
-       * ONLINE PAYMENT
-       *
-       * First check Razorpay configuration.
-       */
-      const { data: status } = await paymentsApi.status();
-
-      if (!status.configured) {
-        throw new Error(
-          'Online payment is not configured yet. Please choose Cash on Delivery.'
-        );
-      }
-
-      /*
-       * Create Razorpay order from backend.
-       */
-      const { data: rp } =
-        await paymentsApi.createOrder(order._id);
-
-      /*
-       * Open Razorpay Checkout.
-       */
-      const result = await openRazorpayCheckout({
-        keyId: rp.keyId,
-
-        amount: rp.amount,
-
-        currency: rp.currency,
-
-        razorpayOrderId: rp.razorpayOrderId,
-
-        orderNumber: rp.orderNumber,
-
-        storeName: company.brandName,
-
-        name: address.fullName,
-
-        email: address.email,
-
-        contact: address.phone,
-
-        /*
-         * Selected payment category from our checkout.
-         *
-         * Example:
-         * card
-         * upi
-         * netbanking
-         * wallet
-         */
-        method: payMethod,
-      });
-
-      /*
-       * Verify payment on backend.
-       */
-      await paymentsApi.verify({
-        orderId: order._id,
-
-        razorpayOrderId:
-          result.razorpayOrderId,
-
-        razorpayPaymentId:
-          result.razorpayPaymentId,
-
-        razorpaySignature:
-          result.razorpaySignature,
-      });
-
-      /*
-       * Payment successful.
-       */
-      clearCart();
-
-      clearCoupon();
-
-      navigate('/order-confirmation', {
-        state: {
-          orderNumber: order.orderNumber,
-        },
-      });
+      // PayPal: show the buttons for this order; the cart is cleared only after the server confirms payment.
+      setPending({ orderId: order._id, orderNumber: order.orderNumber, accessToken: order.accessToken, total: order.pricing?.grandTotal });
     } catch (err) {
-      console.error(
-        'Place order failed:',
-        err
-      );
-
-      showError(
-        err,
-        'Could not place your order — please try again'
-      );
-
-      setFormError(
-        err?.message ||
-          'Could not place your order'
-      );
+      showError(err, 'Could not place your order — please try again');
+      setFormError(err?.message || 'Could not place your order');
     } finally {
       setPlacing(false);
     }
+  }
+
+  function onPayPalPaid(result) {
+    if (result?.paid || result?.pending) finish(result.orderNumber);
+    else setFormError('Your payment is still being confirmed. Please check your account for the order status shortly.');
+  }
+
+  function onPayPalError(err) {
+    setFormError(err?.message || 'The payment could not be completed. You have not been charged for an unpaid order — please try again.');
+  }
+
+  function onPayPalCancel() {
+    setFormError('Payment was cancelled. Your order is saved but unpaid — press the PayPal button to try again.');
   }
 
   /*
@@ -587,13 +418,13 @@ export default function Checkout() {
                   <RadioCard
                     active={shipMethod === 'standard'} onClick={() => setShipMethod('standard')}
                     title="Standard shipping"
-                    sub={`3–6 business days · ${cartSubtotal > 15000 ? 'Free' : rupee(499)}`}
+                    sub={`${company.shipping.deliveryMinDays}–${company.shipping.deliveryMaxDays} business days · ${freeShippingThreshold > 0 && cartSubtotal > freeShippingThreshold ? 'Free' : rupee(standardRate)}`}
                     icon={FiTruck}
                   />
                   <RadioCard
                     active={shipMethod === 'express'} onClick={() => setShipMethod('express')}
                     title="Express shipping"
-                    sub={`1–2 business days · ${rupee(999)}`}
+                    sub={`Faster delivery · ${rupee(expressRate)}`}
                     icon={FiPackage}
                   />
                 </div>
@@ -602,6 +433,15 @@ export default function Checkout() {
               {/* ================= STEP 2: PAYMENT ================= */}
               {step === 2 && (
                 <div className="grid gap-[22px]">
+                  {methodsLoading && <p className="m-0 text-muted" role="status">Loading payment options…</p>}
+                  {!methodsLoading && (methodsError || PAYMENT_OPTIONS.length === 0) && (
+                    <FormAlert>No online payment method is available right now. Please call us on {company.phones[0]} to place your order.</FormAlert>
+                  )}
+                  {!methodsLoading && !methodsError && PAYMENT_OPTIONS.length > 0 && !methods?.paypal?.enabled && (
+                    <p className="m-0 rounded-md border border-line bg-sand/60 px-4 py-3 text-[0.84rem] text-muted" role="note">
+                      Online payment (PayPal / card) is not available at the moment, so only the methods below can be used for this order.
+                    </p>
+                  )}
                   <div className="grid gap-3" role="radiogroup" aria-label="Payment method">
                     {PAYMENT_OPTIONS.map((option) => (
                       <RadioCard key={option.id} active={payMethod === option.id} onClick={() => setPayMethod(option.id)} title={option.title} sub={option.sub} icon={option.icon} />
@@ -616,7 +456,7 @@ export default function Checkout() {
                     ) : (
                       <>
                         <FiLock size={16} aria-hidden="true" className="mt-0.5 flex-none text-walnut" />
-                        <span>You will be securely redirected to Razorpay Checkout to complete your payment. Card, UPI, Netbanking and other methods shown there depend on your Razorpay account and customer's availability.</span>
+                        <span>Payment is taken securely by PayPal in the final step. Your total is shown in rupees; PayPal shows the exact amount in {methods?.paypal?.currency || 'your payment currency'} before you confirm.</span>
                       </>
                     )}
                   </p>
@@ -629,7 +469,7 @@ export default function Checkout() {
                   <ul className="m-0 list-none p-0">
                     {cart.map((item) => (
                       <li key={item.id} className="flex justify-between gap-4 border-b border-line py-3">
-                        <span>{item.name} × {item.qty}</span>
+                        <span>{item.name}{item.length ? ` · ${item.length}"` : ''}{item.color ? ` · ${item.color}` : ''} × {item.qty}</span>
                         <span className="tabular-nums">{rupee(item.price * item.qty)}</span>
                       </li>
                     ))}
@@ -648,11 +488,28 @@ export default function Checkout() {
 
             {formError && <FormAlert className="mt-[18px]">{formError}</FormAlert>}
 
+            {pending && methods?.paypal?.enabled && (
+              <div className="mt-[18px] grid gap-3 rounded-lg border border-line bg-white p-5">
+                <p className="m-0 text-[0.9rem] text-muted">Order <strong className="text-espresso">{pending.orderNumber}</strong> is reserved for you. Total payable: <strong className="text-espresso">{rupee(pending.total)}</strong></p>
+                <PayPalButtons
+                  clientId={methods.paypal.clientId}
+                  currency={methods.paypal.currency}
+                  orderId={pending.orderId}
+                  accessToken={pending.accessToken}
+                  onPaid={onPayPalPaid}
+                  onError={onPayPalError}
+                  onCancel={onPayPalCancel}
+                />
+              </div>
+            )}
+
             <div className="mt-6 flex items-center justify-between gap-3">
-              {step > 0 ? <Button variant="outline" onClick={previous} disabled={placing}>Back</Button> : <span />}
-              <Button size="lg" onClick={next} loading={placing} disabled={placing || cart.length === 0}>
-                {placing ? 'Processing…' : step === STEPS.length - 1 ? (payMethod === 'cod' ? 'Place order' : 'Proceed to payment') : step === 1 ? 'Continue to Payment' : 'Continue'}
-              </Button>
+              {step > 0 && !pending ? <Button variant="outline" onClick={previous} disabled={placing}>Back</Button> : <span />}
+              {!pending && (
+                <Button size="lg" onClick={next} loading={placing} disabled={placing || cart.length === 0 || (step >= 2 && !payMethod)}>
+                  {placing ? 'Processing…' : step === STEPS.length - 1 ? (payMethod === 'cod' ? 'Place order' : 'Continue to PayPal') : step === 1 ? 'Continue to Payment' : 'Continue'}
+                </Button>
+              )}
             </div>
           </div>
 

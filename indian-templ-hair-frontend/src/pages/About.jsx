@@ -9,29 +9,21 @@ import { useSiteContent } from '../hooks/useStoreData';
 import Container from '../components/Container';
 import Section from '../components/Section';
 import { cx, eyebrow } from '../lib/ui';
-import storyPhoto from '../assets/photos/factory-history.jpg';
-
-const timeline = [
-  { year: '2014', title: 'Founded in New Delhi', desc: 'Indian Temple Remy Hair Exports began as a small sorting unit serving local salons across Delhi.' },
-  { year: '2017', title: 'First Export Shipment', desc: 'Our first international container shipped to a distributor in the United States.' },
-  { year: '2019', title: '100+ Team Members', desc: 'In-house wefting and QC teams expanded to keep every stage of production under one roof.' },
-  { year: '2022', title: 'Expanded to 40+ Countries', desc: 'Wholesale partnerships grew across Africa, Europe and the Middle East.' },
-  { year: '2026', title: '200+ Artisans, 50+ Countries', desc: 'Today we manufacture, export and supply raw, remy and virgin hair worldwide.' },
-];
-
-const VALUES = ['Factory-direct, no middlemen', 'Hand-sorted, double-drawn, QC-checked', 'Batch documentation with every order', 'Ethically sourced and traceable'];
+import { imageOr } from '../lib/media';
 
 export default function About() {
   const { siteContent } = useSiteContent();
   const features = (siteContent?.whyChooseUs?.items || []).slice(0, 4);
-  const stats = siteContent?.hero?.stats?.length ? siteContent.hero.stats : null;
-  const statList = stats || [
-    { value: '2014', label: 'Year founded' }, { value: '200+', label: 'Artisans' },
-    { value: '50+', label: 'Export countries' }, { value: '12 yrs', label: 'In business' },
-  ];
+  // Everything below is edited in Admin → Website Content → About Page (stats fall back to Hero stats).
+  const about = siteContent?.aboutPage || {};
+  const story = (about.story || []).filter(Boolean);
+  const values = (about.values || []).filter(Boolean);
+  const timeline = (about.timeline || []).filter((t) => t?.year || t?.title);
+  const statList = (about.stats?.length ? about.stats : siteContent?.hero?.stats || []).filter((st) => st?.value && st?.label);
+  const storyPhoto = imageOr(about.image);
   return (
     <>
-      <PageHeader crumbs={[{ label: 'About' }]} title="About Indian Temple Remy Hair Exports" lede="Manufacturer, exporter and supplier of 100% human hair, built in Delhi, trusted worldwide." tall />
+      <PageHeader crumbs={[{ label: 'About' }]} title={about.heading || 'About us'} lede={about.lede} tall />
 
       {features.length > 0 && (
         <Section tight>
@@ -49,30 +41,34 @@ export default function About() {
         </Section>
       )}
 
-      <Reveal as="section" className="py-14 sm:py-20 lg:py-24">
-        <Container className="grid items-center gap-[clamp(32px,6vw,80px)] md:grid-cols-[.9fr_1.1fr]">
-          <div className="aspect-[4/5] overflow-hidden rounded-t-full [&>div]:h-full">
-            <PhotoBlock tone="brown" ratio="4/5" src={storyPhoto} alt="Indian Temple Remy Hair Exports story" />
-          </div>
-          <div className="max-w-[64ch]">
-            <p className={cx(eyebrow, 'mb-2.5')}>Our story</p>
-            <h2 className="mb-4 text-[clamp(1.7rem,3vw,2.5rem)]">A factory built on trust, not middlemen</h2>
-            <div className="grid gap-4 text-ink">
-              <p>Indian Temple Remy Hair Exports was founded in 2014 out of a simple frustration: too much of the "Indian hair" sold worldwide passed through layers of resellers before it ever reached a real customer.</p>
-              <p>We set out to manufacture, sort and export hair directly from our own factory floor in Najafgarh Road, New Delhi, keeping every stage of production, from sourcing to packing, under one roof and one standard of quality.</p>
-              <p>Today, a team of 200+ artisans hand-sorts, double-draws and wefts every bundle that leaves our facility, shipping to distributors, salons and stylists in more than 50 countries.</p>
+      {(story.length > 0 || storyPhoto) && (
+        <Reveal as="section" className="py-14 sm:py-20 lg:py-24">
+          <Container className={cx('grid items-center gap-[clamp(32px,6vw,80px)]', storyPhoto && 'md:grid-cols-[.9fr_1.1fr]')}>
+            {storyPhoto && (
+              <div className="aspect-[4/5] overflow-hidden rounded-t-full [&>div]:h-full">
+                <PhotoBlock tone="brown" ratio="4/5" src={storyPhoto} alt={about.storyHeading || 'Our story'} />
+              </div>
+            )}
+            <div className="max-w-[64ch]">
+              {about.storyEyebrow && <p className={cx(eyebrow, 'mb-2.5')}>{about.storyEyebrow}</p>}
+              {about.storyHeading && <h2 className="mb-4 text-[clamp(1.7rem,3vw,2.5rem)]">{about.storyHeading}</h2>}
+              <div className="grid gap-4 text-ink">
+                {story.map((para) => <p key={para}>{para}</p>)}
+              </div>
+              {values.length > 0 && (
+                <ul className="m-0 mt-6 grid list-none gap-2.5 p-0 sm:grid-cols-2">
+                  {values.map((v) => (
+                    <li key={v} className="flex items-start gap-2.5 text-[0.9rem] text-espresso"><FiCheck size={16} className="mt-1 flex-none text-brand" aria-hidden="true" />{v}</li>
+                  ))}
+                </ul>
+              )}
+              <div className="mt-[26px] flex flex-wrap gap-3"><Button to="/shop">Shop the collection</Button><Button to="/factory" variant="outline">See our process</Button></div>
             </div>
-            <ul className="m-0 mt-6 grid list-none gap-2.5 p-0 sm:grid-cols-2">
-              {VALUES.map((v) => (
-                <li key={v} className="flex items-start gap-2.5 text-[0.9rem] text-espresso"><FiCheck size={16} className="mt-1 flex-none text-brand" aria-hidden="true" />{v}</li>
-              ))}
-            </ul>
-            <div className="mt-[26px] flex flex-wrap gap-3"><Button to="/shop">Shop the collection</Button><Button to="/factory" variant="outline">See our process</Button></div>
-          </div>
-        </Container>
-      </Reveal>
+          </Container>
+        </Reveal>
+      )}
 
-      <Reveal as="section" className="on-dark bg-espresso py-10 text-cream">
+      {statList.length > 0 && <Reveal as="section" className="on-dark bg-espresso py-10 text-cream">
         <Container>
           <dl className="m-0 grid grid-cols-2 gap-x-3 gap-y-6 sm:gap-5 md:grid-cols-4">
             {statList.map((st) => (
@@ -83,9 +79,9 @@ export default function About() {
             ))}
           </dl>
         </Container>
-      </Reveal>
+      </Reveal>}
 
-      <Reveal as="section" className="py-14 sm:py-20 lg:py-24">
+      {timeline.length > 0 && <Reveal as="section" className="py-14 sm:py-20 lg:py-24">
         <Container narrow>
           <SectionHeading center title="Our journey" rule />
           <ol className="relative m-0 list-none p-0 before:absolute before:bottom-1.5 before:left-2 before:top-1.5 before:w-px before:bg-line before:content-[''] sm:before:left-[102px]">
@@ -101,16 +97,18 @@ export default function About() {
             ))}
           </ol>
         </Container>
-      </Reveal>
+      </Reveal>}
 
-      <Reveal as="section" className="bg-sand py-14 sm:py-20 lg:py-24">
-        <Container narrow>
-          <figure className="m-0 text-center">
-            <blockquote className="m-0 font-display text-[clamp(1.4rem,3vw,2rem)] leading-[1.45] text-espresso before:text-gold before:content-['“'] after:text-gold after:content-['”']">We never wanted to be the biggest supplier, just the one distributors trust to open every carton and find exactly what they ordered.</blockquote>
-            <figcaption className="mt-[18px] text-[0.9rem] font-semibold tracking-[0.04em] text-walnut">Founder, Indian Temple Remy Hair Exports</figcaption>
-          </figure>
-        </Container>
-      </Reveal>
+      {about.quote && (
+        <Reveal as="section" className="bg-sand py-14 sm:py-20 lg:py-24">
+          <Container narrow>
+            <figure className="m-0 text-center">
+              <blockquote className="m-0 font-display text-[clamp(1.4rem,3vw,2rem)] leading-[1.45] text-espresso before:text-gold before:content-['“'] after:text-gold after:content-['”']">{about.quote}</blockquote>
+              {about.quoteAuthor && <figcaption className="mt-[18px] text-[0.9rem] font-semibold tracking-[0.04em] text-walnut">{about.quoteAuthor}</figcaption>}
+            </figure>
+          </Container>
+        </Reveal>
+      )}
 
       <Section tight>
         <Container>

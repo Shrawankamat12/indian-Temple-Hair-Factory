@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
-import { useSiteContent } from '../hooks/useStoreData';
+import { useSiteContent, useCompanyInfo } from '../hooks/useStoreData';
 import { LoadingState } from '../components/StateBlocks';
 import Container from '../components/Container';
 import Section from '../components/Section';
@@ -9,36 +9,40 @@ import { Link } from 'react-router-dom';
 import { cx } from '../lib/ui';
 
 const POLICY_LINKS = [
-  ['shipping', 'Shipping'], ['returns', 'Returns & Refund'], ['cancellation', 'Cancellation'], ['privacy', 'Privacy'], ['terms', 'Terms'],
+  ['shipping', 'Shipping'], ['returns', 'Returns'], ['refund', 'Refunds'], ['cancellation', 'Cancellation'], ['privacy', 'Privacy'], ['terms', 'Terms'],
 ];
 
-const content = {
+// Built from live settings so the wording can never disagree with what checkout charges.
+const makeContent = (company) => ({
   shipping: {
     title: 'Shipping Policy',
     body: [
-      ['Shipping Timelines', 'In-stock orders ship from our New Delhi facility within 24 hours. Domestic delivery takes 3–6 business days; international export delivery takes 6–12 business days depending on customs clearance.'],
-      ['Shipping Costs', 'Orders above ₹15,000 ship free domestically. Below that threshold, a flat ₹499 shipping fee applies. Express shipping is available at checkout for an additional fee.'],
+      ['Shipping Timelines', `Delivery usually takes ${company.shipping.deliveryMinDays}–${company.shipping.deliveryMaxDays} business days. International and export shipments depend on the destination and customs clearance.`],
+      ['Shipping Costs', (() => { const sh = company.shipping; const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`; return `${sh.freeShippingThreshold > 0 ? `Orders above ${inr(sh.freeShippingThreshold)} ship free. Below that, a ${inr(sh.standardRate)} standard shipping fee applies. ` : `Standard shipping is ${inr(sh.standardRate)}. `}Express shipping is ${inr(sh.expressRate)}.`; })()],
       ['International / Export Orders', 'Wholesale and export shipments are quoted individually based on destination, weight and Incoterms (FOB / CIF). Contact our export desk for a shipping quote.'],
       ['Customs & Duties', 'International buyers are responsible for any customs duties, taxes or import fees levied by their destination country.'],
       ['Order Tracking', 'A tracking number is shared by email once your order ships. You can also track orders from your account dashboard.'],
     ],
   },
   returns: {
-    title: 'Return & Refund Policy',
+    title: 'Return Policy',
     body: [
-      ['Returns Eligibility', 'Unopened bundles, wigs, closures and frontals in original packaging may be returned within 7 days of delivery for a full refund, minus shipping costs.'],
-      ['Exchanges', 'Opened wefts, wigs and closures can only be exchanged in the case of a manufacturing defect, verified by our QC team.'],
-      ['How to Request a Return', 'Contact our support team with your order number and reason for return; we will share a return authorisation and address.'],
-      ['Refund Processing', 'Approved refunds are processed within 5–7 business days back to the original payment method.'],
-      ['Wholesale / Bulk Orders', 'Bulk and wholesale export orders are covered under separate terms agreed at the time of the order; please refer to your wholesale agreement.'],
+      ['No returns', 'All sales are final. We do not accept returns on any order once it has been placed.'],
+      ['Questions about your order', 'If you have a question or a concern about an order you have received, please contact us by phone using the number shown on this page.'],
+    ],
+  },
+  refund: {
+    title: 'Refund Policy',
+    body: [
+      ['No refunds', 'We do not offer refunds on any order once it has been placed.'],
+      ['Questions about a payment', 'If you believe you have been charged incorrectly, please contact us by phone using the number shown on this page.'],
     ],
   },
   cancellation: {
     title: 'Cancellation Policy',
     body: [
-      ['Before Dispatch', 'You can cancel an order at any time before it is dispatched. Contact support with your order number and we will confirm the cancellation.'],
-      ['After Dispatch', 'Once an order has shipped it cannot be cancelled; you may use our return process after delivery.'],
-      ['Refunds for Cancelled Orders', 'Refunds for cancelled prepaid orders are processed to the original payment method within 5–7 business days.'],
+      ['Orders cannot be cancelled', 'Once an order has been placed it cannot be cancelled.'],
+      ['Need help?', 'For any question about your order, please contact us by phone using the number shown on this page.'],
     ],
   },
   privacy: {
@@ -54,21 +58,23 @@ const content = {
     title: 'Terms of Service',
     body: [
       ['Use of This Site', 'By placing an order, you confirm the information provided is accurate and that you are authorised to make the purchase.'],
-      ['Pricing', 'All prices are listed in Indian Rupees (₹) and are subject to change without prior notice. Wholesale pricing requires a separate agreement.'],
+      ['Pricing & Payment', 'Prices are listed in Indian Rupees (₹) and may change without prior notice. Online payments are processed securely by PayPal and may be charged in another currency; PayPal shows the exact amount before you confirm. Wholesale pricing requires a separate agreement.'],
       ['Product Descriptions', 'We aim for accuracy in every product description; minor natural variation in hair texture and colour between batches should be expected.'],
-      ['Limitation of Liability', 'Indian Temple Remy Hair Exports is not liable for indirect or consequential damages arising from product use beyond the value of the order.'],
+      ['Limitation of Liability', `${company.brandName} is not liable for indirect or consequential damages arising from product use beyond the value of the order.`],
     ],
   },
-};
+});
 
 // Admin-edited policy (Website Content → Policy Pages, matched by slug) wins; the built-in text above
 // is only a fallback for slugs the admin has not created yet.
 export default function Policy() {
   const { type } = useParams();
   const { siteContent, loading } = useSiteContent();
+  const { company } = useCompanyInfo();
   if (loading) return <LoadingState label="Loading policy" />;
 
   const cms = (siteContent?.policies || []).find((p) => p.slug === type && (p.sections?.length || p.title));
+  const content = makeContent(company);
   const fallback = content[type] || content.shipping;
   const title = cms?.title || fallback.title;
   const sections = cms
@@ -101,7 +107,10 @@ export default function Policy() {
           </ol>
           <div className="mt-10 rounded-xl bg-sand p-7 text-center">
             <h3 className="mb-1.5">Questions about this policy?</h3>
-            <p className="mx-auto mb-[18px] text-muted">Our team is happy to help.</p>
+            <p className="mx-auto mb-[18px] text-muted">{company.policyContactNote || 'Please call us and our team will help.'}</p>
+            {company.phones[0] && (
+              <a href={`tel:${company.phones[0].replace(/[\s()-]+/g, '')}`} className="mb-4 block font-display text-[1.6rem] text-espresso hover:text-walnut">{company.phones[0]}</a>
+            )}
             <Button to="/contact" variant="dark">Contact us</Button>
           </div>
         </Container>

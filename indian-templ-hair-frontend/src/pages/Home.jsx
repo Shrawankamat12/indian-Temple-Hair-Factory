@@ -18,7 +18,6 @@ import QuickView from '../components/QuickView';
 import { useRecentlyViewedList } from '../hooks/useRecentlyViewed';
 import { imageOr, isExternal, isRealImage } from '../lib/media';
 import { topLevelCategories } from '../lib/categories';
-import { processSteps, certifications, exportCountries } from '../data/content';
 import {
   useCategories, useProductsByBadge, useProductsByFlag, useTestimonials, useSiteContent,
   useCompanyInfo, useBanners, useAttributes, useBlogs,
@@ -28,8 +27,6 @@ import {
 import heroModel from '../assets/photos/hero-model.jpg';
 import factorySorting from '../assets/photos/factory-sorting.jpg';
 import factoryWefting from '../assets/photos/factory-wefting.jpg';
-import factoryPacking from '../assets/photos/factory-packing.jpg';
-import factoryExport from '../assets/photos/factory-export.jpg';
 import catBulk from '../assets/photos/cat-bulk.jpg';
 import catBlonde from '../assets/photos/cat-blonde.jpg';
 import catRaw from '../assets/photos/cat-rawbundles.jpg';
@@ -90,14 +87,6 @@ const textureFallback = (name = '') => {
 const SECTION_ORDER = [
   'categories', 'textures', 'midBanner', 'flashSale', 'bestSellers', 'newArrivals', 'offerCards', 'whyUs', 'process',
   'seasonalOffers', 'specialOffers', 'beforeAfter', 'careGuide', 'testimonials', 'exportBand', 'instagram',
-];
-
-// Hero extras. Real values from Website Content → Hero Banner (stats, badges) win; these are fallbacks
-// that repeat facts already shown on the About / Factory pages.
-const DEFAULT_HERO_STATS = [
-  { value: '200+', label: 'Artisans' },
-  { value: '50+', label: 'Export countries' },
-  { value: '24 hrs', label: 'Dispatch from Delhi' },
 ];
 
 function orderSections(homeSections = []) {
@@ -185,22 +174,24 @@ export default function Home() {
 
   const { keys, enabled } = orderSections(sc?.homeSections);
 
-  // ---------------- HERO: admin Hero Banner content + home-hero banners ----------------
+  // ---------------- HERO: only what the admin has configured ----------------
+  // Slide 1 = Website Content → Hero Banner. More slides = Banners with placement "home-hero".
+  // Nothing is invented: with one configured slide the hero shows one slide (no arrows / dots).
   const hero = sc?.hero || {};
   const slides = [];
-  if (hero.title || hero.image || !sc) {
+  if (hero.title || hero.image) {
     slides.push({
       key: 'hero',
       eyebrow: hero.eyebrow,
-      title: hero.title || 'Pure Indian Hair. Naturally Beautiful.',
+      title: hero.title,
       highlight: hero.highlightText,
       subtitle: hero.subtitle,
       image: imageOr(hero.image, heroModel),
       flip: !isRealImage(hero.image), // bundled model photo faces left; flip so she sits on the right of the copy
-      alt: 'Woman with long, glossy Indian remy hair',
-      primary: { text: hero.primaryCtaText || 'Shop Now', link: hero.primaryCtaLink || '/shop' },
+      alt: hero.title || '',
+      primary: hero.primaryCtaText ? { text: hero.primaryCtaText, link: hero.primaryCtaLink || '/shop' } : null,
       secondary: hero.secondaryCtaText ? { text: hero.secondaryCtaText, link: hero.secondaryCtaLink || '/about' } : null,
-      stats: (hero.stats?.length ? hero.stats : DEFAULT_HERO_STATS).slice(0, 3),
+      stats: (hero.stats || []).filter((st) => st?.value && st?.label).slice(0, 3),
     });
   }
   heroBanners.filter((b) => imageOr(b.img)).forEach((b) => {
@@ -209,26 +200,6 @@ export default function Home() {
       primary: b.ctaText ? { text: b.ctaText, link: b.ctaLink || '/shop' } : null,
     });
   });
-
-  // Always show 3 photo slides: pad with these until the admin adds real slides (Banners → home-hero).
-  const wigCategory = topLevelCategories(categories).find((c) => /wig/i.test(`${c.slug} ${c.name}`));
-  const fallbackSlides = [
-    {
-      key: 'fb-wigs', eyebrow: 'Wigs & Toppers', title: 'Real Indian hair wigs, ready to wear.',
-      subtitle: 'Full lace wigs, bob wigs, curly and long wavy styles, and hair toppers from our New Delhi factory.',
-      image: wigShelf, alt: 'Shelves of human hair wigs',
-      primary: { text: 'Shop Wigs', link: wigCategory ? `/shop?category=${wigCategory.slug}` : '/shop' },
-      secondary: { text: 'View all products', link: '/shop' },
-    },
-    {
-      key: 'fb-export', eyebrow: 'Wholesale & Export', title: 'Made in New Delhi. Shipped worldwide.',
-      subtitle: 'Raw, remy and virgin hair, closures and frontals, hand-sorted and packed for salons and distributors.',
-      image: factoryExport, alt: 'Wall of hair bundles and extensions at our factory',
-      primary: { text: 'Wholesale enquiry', link: '/wholesale' },
-      secondary: { text: 'Our process', link: '/factory' },
-    },
-  ];
-  for (let n = 0; slides.length < 3 && n < fallbackSlides.length; n += 1) slides.push(fallbackSlides[n]);
 
   // ---------------- data for sections ----------------
   const shopCategories = [...topLevelCategories(categories)]
@@ -250,13 +221,17 @@ export default function Home() {
   const instaUrl = company.socialLinks?.instagram;
   const news = sc?.newsletterSection || {};
   const why = sc?.whyChooseUs || {};
+  const processSteps = (sc?.processSteps || []).filter((st) => st?.step);
+  const certifications = (sc?.certifications || []).filter(Boolean);
+  const exportCountries = (sc?.exportCountries || []).filter(Boolean);
+  const processPhotos = (sc?.factoryGallery?.images || []).filter((g) => g?.image).slice(0, 3);
   const whyItems = (why.items || []).filter((it) => it?.title).slice(0, 6);
 
   const sections = {
     categories: shopCategories.length > 0 && (
       <Reveal as="section" className={BAND}>
         <Container>
-          <SectionHeading title="Shop by Category" sub="Wigs, closures, frontals and bulk hair, straight from our New Delhi factory." rule action={{ to: '/shop', label: 'View all' }} />
+          <SectionHeading title="Shop by Category" rule action={{ to: '/shop', label: 'View all' }} />
           <div className="flex flex-wrap justify-center gap-x-[clamp(20px,4vw,56px)] gap-y-6">
             {shopCategories.map((c) => {
               const img = imageOr(c.image || c.img, categoryFallback(c));
@@ -376,37 +351,41 @@ export default function Home() {
       </Reveal>
     ),
 
-    process: (
+    process: processSteps.length > 0 && (
       <Reveal as="section" className={cx('on-dark bg-espresso text-cream', BAND)}>
         <Container>
           <div className="text-center">
-            <p className={cx(eyebrowGold, 'mb-2.5')}>Our Process</p>
-            <SectionHeading center rule title="From Temple to Your Doorstep" sub="Every stage, from sourcing to packing, is handled at our New Delhi facility." />
+            <p className={cx(eyebrowGold, 'mb-2.5')}>{sc?.factoryGallery?.eyebrow || 'Our Process'}</p>
+            <SectionHeading center rule title={sc?.factoryGallery?.title || 'From Temple to Your Doorstep'} />
           </div>
-          <div className="mb-6 grid grid-cols-3 gap-2.5 sm:gap-4">
-            {[[factorySorting, 'Hand-sorting'], [factoryWefting, 'Wefting'], [factoryPacking, 'Export packing']].map(([src, label]) => (
-              <figure key={label} className="group relative m-0 aspect-[16/9] overflow-hidden rounded-xl border border-champagne/20">
-                <img src={src} alt={label} loading="lazy" className="size-full object-cover transition-transform duration-[900ms] ease-soft group-hover:scale-105" />
-                <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-espresso/85 to-transparent px-2 pb-2 pt-[18px] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-cream sm:px-4 sm:pb-3 sm:pt-[26px] sm:text-[0.8rem]">{label}</figcaption>
-              </figure>
-            ))}
-          </div>
+          {processPhotos.length > 0 && (
+            <div className="mb-6 grid grid-cols-3 gap-2.5 sm:gap-4">
+              {processPhotos.map((g) => (
+                <figure key={g.label || g.image} className="group relative m-0 aspect-[16/9] overflow-hidden rounded-xl border border-champagne/20">
+                  <img src={imageOr(g.image)} alt={g.label || ''} loading="lazy" className="size-full object-cover transition-transform duration-[900ms] ease-soft group-hover:scale-105" />
+                  {g.label && <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-espresso/85 to-transparent px-2 pb-2 pt-[18px] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-cream sm:px-4 sm:pb-3 sm:pt-[26px] sm:text-[0.8rem]">{g.label}</figcaption>}
+                </figure>
+              ))}
+            </div>
+          )}
           <ol className="m-0 grid list-none gap-3 p-0 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {processSteps.map((st, n) => (
               <li key={st.step} className="flex gap-4 rounded-xl border border-champagne/20 bg-cream/5 p-5 transition-colors duration-300 hover:border-champagne/50 hover:bg-cream/[0.09]">
                 <span className="font-display text-[1.6rem] leading-none tabular-nums text-champagne">{String(n + 1).padStart(2, '0')}</span>
                 <div>
                   <h3 className="mb-1 text-[1.05rem] text-cream">{st.step}</h3>
-                  <p className="text-[0.86rem] leading-relaxed text-cream/70">{st.desc}</p>
+                  {st.desc && <p className="text-[0.86rem] leading-relaxed text-cream/70">{st.desc}</p>}
                 </div>
               </li>
             ))}
           </ol>
-          <ul className="m-0 mt-7 flex list-none flex-wrap justify-center gap-x-3 gap-y-2.5 p-0">
-            {certifications.map((c) => (
-              <li key={c} className="inline-flex items-center gap-2 rounded-full border border-champagne/20 px-4 py-2 text-[0.8rem] text-cream"><FiCheck size={15} className="flex-none text-champagne" />{c}</li>
-            ))}
-          </ul>
+          {certifications.length > 0 && (
+            <ul className="m-0 mt-7 flex list-none flex-wrap justify-center gap-x-3 gap-y-2.5 p-0">
+              {certifications.map((c) => (
+                <li key={c} className="inline-flex items-center gap-2 rounded-full border border-champagne/20 px-4 py-2 text-[0.8rem] text-cream"><FiCheck size={15} className="flex-none text-champagne" />{c}</li>
+              ))}
+            </ul>
+          )}
           <div className="mt-7 flex justify-center"><Link to="/factory" className={btn('primary', 'lg')}>See our full process</Link></div>
         </Container>
       </Reveal>
@@ -531,7 +510,7 @@ export default function Home() {
     ),
 
     // Light card (not another dark block): keeps the dark newsletter + footer at the bottom distinct.
-    exportBand: (
+    exportBand: exportCountries.length > 0 && (
       <Reveal as="section" className={BAND}>
         <Container>
           <div className="grid items-center gap-[clamp(24px,5vw,64px)] rounded-2xl border border-line bg-white p-[clamp(24px,5vw,56px)] shadow-soft lg:grid-cols-[1.1fr_.9fr]">

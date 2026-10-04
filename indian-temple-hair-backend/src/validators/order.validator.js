@@ -3,8 +3,7 @@ const { body } = require('express-validator');
 exports.createOrderRules = [
   body('items').isArray({ min: 1 }).withMessage('Order must contain at least one item'),
   body('items.*.productId').isMongoId().withMessage('Each item needs a valid product id'),
-  body('items.*.unitPrice').isFloat({ min: 0 }).withMessage('Each item needs a valid unit price'),
-  body('items.*.discount').optional().isFloat({ min: 0 }).withMessage('Item discount must be a positive number'),
+  // Prices, discounts and totals are NOT accepted from the client — the server re-prices every line.
   body('items.*.quantity').isInt({ min: 1 }).withMessage('Each item needs a quantity of at least 1'),
 
   body('shippingAddress.fullName').trim().notEmpty().withMessage('Shipping full name is required'),
@@ -26,8 +25,8 @@ exports.createOrderRules = [
   // rather than flat shippingMethod/paymentMethod — accept either shape.
   body('shippingMethod').optional().isIn(['standard', 'express']).withMessage('Invalid shipping method'),
   body('shipping.method').optional().isIn(['standard', 'express']).withMessage('Invalid shipping method'),
-  body('paymentMethod').optional().isIn(['card', 'upi', 'netbanking', 'wallet', 'cod']).withMessage('Invalid payment method'),
-  body('payment.method').optional().isIn(['card', 'upi', 'netbanking', 'wallet', 'cod']).withMessage('Invalid payment method'),
+  body('paymentMethod').optional().isIn(['paypal', 'cod']).withMessage('Invalid payment method'),
+  body('payment.method').optional().isIn(['paypal', 'cod']).withMessage('Invalid payment method'),
   body('couponCode').optional().trim(),
   body('orderSource').optional().isIn(['Website', 'Admin', 'Mobile']).withMessage('Invalid order source'),
 ];
@@ -39,6 +38,7 @@ exports.updateOrderStatusRules = [
       'pending',
       'placed',
       'confirmed',
+      'processing',
       'packed',
       'shipped',
       'out_for_delivery',
@@ -50,7 +50,7 @@ exports.updateOrderStatusRules = [
     .withMessage('Invalid order status'),
   body('paymentStatus')
     .optional()
-    .isIn(['pending', 'paid', 'failed', 'refunded', 'partially_refunded'])
+    .isIn(['pending', 'processing', 'paid', 'failed', 'cancelled', 'refunded', 'partially_refunded'])
     .withMessage('Invalid payment status'),
   body('trackingNumber').optional().trim(),
   body('note').optional().trim(),

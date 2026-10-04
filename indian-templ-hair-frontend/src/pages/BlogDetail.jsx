@@ -51,10 +51,7 @@ export default function BlogDetail() {
             {post.content ? (
               post.content.split('\n\n').map((para, i) => <p key={i} className="max-w-none">{para}</p>)
             ) : (
-              <>
-                <p className="max-w-none">{post.excerpt}</p>
-                <p className="max-w-none">At our New Delhi facility, every claim we make about our hair is something our own QC team checks by hand before a bundle ever reaches a customer.</p>
-              </>
+              post.excerpt && <p className="max-w-none">{post.excerpt}</p>
             )}
           </article>
         </Container>

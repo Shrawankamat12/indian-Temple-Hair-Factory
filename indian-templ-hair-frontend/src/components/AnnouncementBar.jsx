@@ -1,21 +1,26 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useSiteContent } from '../hooks/useStoreData';
+import { useSiteContent, useCompanyInfo } from '../hooks/useStoreData';
 import BadgeIcon from './BadgeIcon';
 import Container from './Container';
 
 // Fallbacks only when the admin has not added announcements (Website Content → Header).
-// The threshold matches the shipping charge rule in the order service.
-const DEFAULT_MESSAGES = [
-  'Free shipping on orders above ₹15,000',
-  'Cash on delivery available',
-  'Easy 7-day returns',
-];
+// Built from the live shipping / payment settings so nothing here can drift from what checkout really does.
+// (The business has a no-returns policy, so no returns promise is ever made here.)
+function defaultMessages(company) {
+  const t = company.shipping?.freeShippingThreshold;
+  const list = [];
+  if (t > 0) list.push(`Free shipping on orders above ₹${Number(t).toLocaleString('en-IN')}`);
+  list.push('Worldwide shipping');
+  if (company.codEnabled) list.push('Cash on delivery available');
+  return list;
+}
 
 /** Dark strip: up to 3 messages side by side on desktop, rotating one at a time on mobile. */
 export default function AnnouncementBar() {
   const { siteContent: sc } = useSiteContent();
-  const messages = (sc?.announcements?.length ? sc.announcements : DEFAULT_MESSAGES).filter(Boolean).slice(0, 3);
+  const { company } = useCompanyInfo();
+  const messages = (sc?.announcements?.length ? sc.announcements : defaultMessages(company)).filter(Boolean).slice(0, 3);
   const [i, setI] = useState(0);
 
   useEffect(() => {
