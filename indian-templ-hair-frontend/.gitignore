@@ -1,8 +1,12 @@
-node_modules
-dist
+@"
+node_modules/
+dist/
 .env
 .env.local
 .vercel
 *.log
-build-log.txt
-.DS_Store
+"@ | Out-File -Encoding ascii .gitignore
+
+git rm -r -q --cached indian-templ-hair-frontend/node_modules
+git add .
+git status --short | Select-Object -First 10
