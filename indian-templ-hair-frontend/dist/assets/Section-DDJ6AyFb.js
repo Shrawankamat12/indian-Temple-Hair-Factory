@@ -1,1 +1,0 @@
-import{a as e,m as t}from"./Button-CYxwEC9y.js";var n=t(),r={default:``,alt:`bg-sand`,white:`bg-white`,dark:`on-dark bg-espresso text-cream`};function i({tone:t=`default`,tight:i=!1,as:a=`section`,className:o=``,...s}){return(0,n.jsx)(a,{className:e(i?`py-9 sm:py-12 lg:py-16`:`py-14 sm:py-20 lg:py-24`,r[t],o),...s})}export{i as t};
