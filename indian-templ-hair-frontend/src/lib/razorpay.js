@@ -83,7 +83,7 @@ export async function openRazorpayCheckout({
 
       amount: Number(amount),
 
-      currency: currency || 'INR',
+      currency: currency || 'USD',
 
       order_id: razorpayOrderId,
 

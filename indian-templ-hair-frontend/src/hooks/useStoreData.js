@@ -105,7 +105,7 @@ export function useCompanyInfo() {
     favicon: s.favicon || '',
     socialLinks: { ...DEFAULT_COMPANY.socialLinks, ...(footer.socialLinks || {}), ...social, whatsapp },
     // shipping + policy flags, straight from the admin (no duplicated constants in the UI)
-    shipping: s.shipping || { freeShippingThreshold: 15000, standardRate: 499, expressRate: 999, deliveryMinDays: 3, deliveryMaxDays: 6 },
+    shipping: s.shipping || { freeShippingThreshold: 200, standardRate: 15, expressRate: 35, deliveryMinDays: 3, deliveryMaxDays: 6 },
     policy: s.policy || { customerCancellation: false, returns: false, refunds: false },
     policyContactNote: s.policyContactNote || '',
     codEnabled: s.codEnabled !== false,

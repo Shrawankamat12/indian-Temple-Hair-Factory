@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { FiInstagram, FiFacebook, FiYoutube, FiMapPin, FiMail, FiPhone, FiClock } from 'react-icons/fi';
-import { FaWhatsapp, FaPinterestP, FaTiktok, FaLinkedinIn, FaCcVisa, FaCcMastercard, FaRupeeSign } from 'react-icons/fa';
+import { FaWhatsapp, FaPinterestP, FaTiktok, FaLinkedinIn, FaCcVisa, FaCcMastercard, FaDollarSign } from 'react-icons/fa';
 import { useSiteContent, useCompanyInfo } from '../hooks/useStoreData';
 import { useAsync } from '../hooks/useAsync';
 import { paymentsApi } from '../lib/resources';
@@ -48,7 +48,7 @@ function PaymentChip({ label }) {
   const l = label.toLowerCase();
   if (l.includes('visa')) return <span className={cx(payBase, 'bg-white px-1.5 text-espresso')} title={label}><FaCcVisa size={30} aria-label={label} /></span>;
   if (l.includes('master')) return <span className={cx(payBase, 'bg-white px-1.5 text-espresso')} title={label}><FaCcMastercard size={30} aria-label={label} /></span>;
-  if (l.includes('cod') || l.includes('cash')) return <span className={cx(payBase, 'bg-white/5 text-cream')}><FaRupeeSign size={11} aria-hidden="true" />{label}</span>;
+  if (l.includes('cod') || l.includes('cash')) return <span className={cx(payBase, 'bg-white/5 text-cream')}><FaDollarSign size={11} aria-hidden="true" />{label}</span>;
   return <span className={cx(payBase, 'bg-white/5 text-cream')}>{label}</span>;
 }
 

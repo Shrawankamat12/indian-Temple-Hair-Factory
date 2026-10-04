@@ -75,7 +75,7 @@ export default function Shop() {
   const [page, setPage] = useState(1);
 
   // Price slider ceiling = the dearest real product (rounded up), not a made-up number.
-  const priceCeiling = useMemo(() => Math.ceil(Math.max(0, ...products.map((p) => Number(p.price) || 0)) / 500) * 500, [products]);
+  const priceCeiling = useMemo(() => Math.ceil(Math.max(0, ...products.map((p) => Number(p.price) || 0)) / 10) * 10, [products]);
   const priceActive = maxPrice !== null && maxPrice < priceCeiling;
   const activeCategory = categories.find((c) => c.id === cat);
   const { subcategories } = useSubCategories(activeCategory?._id);
@@ -159,7 +159,7 @@ export default function Shop() {
     density && { label: `${density} density`, clear: () => setDensity(null) },
     onSale && { label: 'On offer', clear: () => setOnSale(false) },
     rating && { label: `${rating}+ stars`, clear: () => setRating(null) },
-    priceActive && { label: `Up to ₹${maxPrice.toLocaleString('en-IN')}`, clear: () => setMaxPrice(null) },
+    priceActive && { label: `Up to $${maxPrice.toLocaleString('en-US')}`, clear: () => setMaxPrice(null) },
   ].filter(Boolean);
 
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));

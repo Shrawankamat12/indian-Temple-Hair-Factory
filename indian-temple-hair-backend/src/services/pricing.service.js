@@ -4,7 +4,8 @@ const AppError = require('../utils/AppError');
 // Server-side source of truth for what an order costs. Nothing in here trusts a price, discount, shipping
 // figure or total from the browser: only productId / variant choice / quantity are read from the request.
 
-const DEFAULTS = { freeShippingThreshold: 15000, flatShippingRate: 499, expressShippingRate: 999 };
+// All money in the store is US dollars. These are only used until the admin saves Settings → Shipping.
+const DEFAULTS = { freeShippingThreshold: 200, flatShippingRate: 15, expressShippingRate: 35 };
 const r2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 const num = (v, d) => (v === undefined || v === null || v === '' || Number.isNaN(Number(v)) ? d : Number(v));
 

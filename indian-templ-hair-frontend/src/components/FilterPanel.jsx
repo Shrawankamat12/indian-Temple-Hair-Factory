@@ -72,10 +72,10 @@ export default function FilterPanel({ data, state, set, activeCount, onReset, le
       {state.priceCeiling > 0 && (
         <FilterAccordion title="Price Range">
           <input
-            type="range" min="0" max={state.priceCeiling} step="500" value={state.maxPrice} className="w-full accent-walnut"
+            type="range" min="0" max={state.priceCeiling} step="5" value={state.maxPrice} className="w-full accent-walnut"
             aria-label="Maximum price" onChange={(e) => set.maxPrice(Number(e.target.value))}
           />
-          <div className="mt-1.5 flex justify-between text-[0.8rem] tabular-nums text-muted"><span>₹0</span><span>Up to ₹{state.maxPrice.toLocaleString('en-IN')}</span></div>
+          <div className="mt-1.5 flex justify-between text-[0.8rem] tabular-nums text-muted"><span>$0</span><span>Up to ${Number(state.maxPrice).toLocaleString('en-US')}</span></div>
         </FilterAccordion>
       )}
 

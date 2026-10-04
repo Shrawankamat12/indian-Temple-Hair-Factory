@@ -9,9 +9,10 @@ export function resolveMediaUrl(url) {
   return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
-export function formatCurrency(value, currency = 'INR') {
+// The whole store runs in US dollars (catalogue, shipping, coupons, orders, PayPal).
+export function formatCurrency(value, currency = 'USD') {
   const n = Number(value || 0);
-  return new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 }
 
 export function formatDate(value, opts = {}) {

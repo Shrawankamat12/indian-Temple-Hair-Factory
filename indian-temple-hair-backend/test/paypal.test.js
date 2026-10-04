@@ -15,7 +15,7 @@ const orderService = require('../src/services/order.service');
 
 const mkOrder = ({ payment, ...rest } = {}) => ({
   _id: 'oid1', orderNumber: 'ITRH-1001', orderStatus: 'pending', user: null,
-  pricing: { grandTotal: 8400 },
+  pricing: { grandTotal: 100 },
   payment: { method: 'paypal', status: 'pending', paypalOrderId: 'PP-ORDER-1', amount: 100, currency: 'USD', ...(payment || {}) },
   ...rest,
 });
@@ -39,12 +39,11 @@ function fakeOrders(initial) {
 }
 test.afterEach(() => mock.restoreAll());
 
-test('charge amount is converted on the server from the INR order total', () => {
-  assert.deepEqual(paypal.chargeFor({ pricing: { grandTotal: 8400 } }, { currency: 'USD', inrPerUnit: 84 }), { value: '100.00', currency: 'USD', rate: 84 });
-  assert.equal(paypal.chargeFor({ pricing: { grandTotal: 8399.5 } }, { currency: 'USD', inrPerUnit: 84 }).value, '99.99'); // 99.994 rounds down
-  assert.equal(paypal.chargeFor({ pricing: { grandTotal: 499 } }, { currency: 'INR' }).value, '499.00');
-  assert.throws(() => paypal.chargeFor({ pricing: { grandTotal: 500 } }, { currency: 'USD', inrPerUnit: 0 }), /exchange rate/);
-  assert.throws(() => paypal.chargeFor({ pricing: { grandTotal: 0 } }, { currency: 'USD', inrPerUnit: 84 }), /invalid/);
+test('charge amount is the USD order total as-is (no conversion)', () => {
+  assert.deepEqual(paypal.chargeFor({ pricing: { grandTotal: 100 } }, { currency: 'USD' }), { value: '100.00', currency: 'USD', rate: null });
+  assert.equal(paypal.chargeFor({ pricing: { grandTotal: 99.994 } }, { currency: 'USD' }).value, '99.99');
+  assert.equal(paypal.chargeFor({ pricing: { grandTotal: 15 } }, {}).currency, 'USD'); // USD is the default
+  assert.throws(() => paypal.chargeFor({ pricing: { grandTotal: 0 } }, { currency: 'USD' }), /invalid/);
 });
 
 test('TEST 7: verified capture -> Paid, order confirmed, ids stored', async () => {
@@ -162,25 +161,25 @@ test('secrets: encrypt/decrypt roundtrip, tamper -> empty, admin view never cont
   assert.equal(decrypt(enc), 'SUPER-SECRET');
   assert.equal(decrypt(enc.slice(0, -4) + 'AAAA'), '');
   const PaymentConfig = require('../src/models/PaymentConfig');
-  const saved = { paypalEnabled: true, paypalClientId: 'CID', paypalEnvironment: 'sandbox', currency: 'USD', inrPerUnit: 84, paypalClientSecretEnc: enc, paypalWebhookId: 'W' };
+  const saved = { paypalEnabled: true, paypalClientId: 'CID', paypalEnvironment: 'sandbox', currency: 'USD', paypalClientSecretEnc: enc, paypalWebhookId: 'W' };
   mock.method(PaymentConfig, 'findOne', () => ({ select: async () => saved, lean: async () => saved }));
   const view = await cfgService.getAdminView();
   assert.ok(!JSON.stringify(view).includes('SUPER-SECRET')); assert.equal(view.hasClientSecret, true);
 });
 
-test('public methods: secret never exposed; paypal hidden until currency is convertible', async () => {
+test('public methods: secret never exposed; paypal shown once enabled and configured', async () => {
   const PaymentConfig = require('../src/models/PaymentConfig');
-  let runtime = { enabled: true, environment: 'sandbox', clientId: 'CID', secret: 'SHH', webhookId: 'W', currency: 'USD', inrPerUnit: 0 };
+  let runtime = { enabled: false, environment: 'sandbox', clientId: 'CID', secret: 'SHH', webhookId: 'W', currency: 'USD' };
   mock.method(cfgService, 'getRuntime', async () => runtime);
   mock.method(Setting, 'findOne', () => ({ lean: async () => ({ codEnabled: false }) }));
   // getPublicMethods closes over module-level getRuntime, so call through a fresh require with the stub in place
   delete require.cache[require.resolve('../src/services/paymentConfig.service')];
   const fresh = require('../src/services/paymentConfig.service');
-  mock.method(PaymentConfig, 'findOne', () => ({ select: async () => ({ paypalEnabled: true, paypalClientId: 'CID', paypalEnvironment: 'sandbox', currency: 'USD', inrPerUnit: 0, paypalClientSecretEnc: encrypt('SHH'), paypalWebhookId: 'W' }) }));
+  mock.method(PaymentConfig, 'findOne', () => ({ select: async () => ({ paypalEnabled: false, paypalClientId: 'CID', paypalEnvironment: 'sandbox', currency: 'USD', paypalClientSecretEnc: encrypt('SHH'), paypalWebhookId: 'W' }) }));
   let m = await fresh.getPublicMethods();
-  assert.equal(m.paypal.enabled, false); assert.equal(m.cod.enabled, false); assert.ok(!JSON.stringify(m).includes('SHH'));
+  assert.equal(m.paypal.enabled, false); assert.equal(m.paypal.currency, 'USD'); assert.equal(m.cod.enabled, false); assert.ok(!JSON.stringify(m).includes('SHH'));
   PaymentConfig.findOne.mock.restore();
-  mock.method(PaymentConfig, 'findOne', () => ({ select: async () => ({ paypalEnabled: true, paypalClientId: 'CID', paypalEnvironment: 'sandbox', currency: 'USD', inrPerUnit: 84, paypalClientSecretEnc: encrypt('SHH'), paypalWebhookId: 'W' }) }));
+  mock.method(PaymentConfig, 'findOne', () => ({ select: async () => ({ paypalEnabled: true, paypalClientId: 'CID', paypalEnvironment: 'sandbox', currency: 'USD', paypalClientSecretEnc: encrypt('SHH'), paypalWebhookId: 'W' }) }));
   m = await fresh.getPublicMethods();
   assert.equal(m.paypal.enabled, true); assert.equal(m.paypal.clientId, 'CID'); assert.ok(!JSON.stringify(m).includes('SHH'));
 });

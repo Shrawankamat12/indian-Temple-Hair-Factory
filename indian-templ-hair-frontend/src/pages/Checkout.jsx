@@ -16,7 +16,7 @@ import {
 
 import Button from '../components/Button';
 import { useStore } from '../context/StoreContext';
-import { rupee } from '../lib/format';
+import { money } from '../lib/format';
 import { ordersApi, paymentsApi } from '../lib/resources';
 import PayPalButtons from '../components/PayPalButtons';
 import { useAsync } from '../hooks/useAsync';
@@ -65,7 +65,7 @@ const emptyAddress = {
   city: '',
   state: '',
   pincode: '',
-  country: 'India',
+  country: '',
 };
 
 export default function Checkout() {
@@ -149,7 +149,7 @@ export default function Checkout() {
       city: saved.city || '',
       state: saved.state || '',
       pincode: saved.pincode || saved.zip || '',
-      country: saved.country || 'India',
+      country: saved.country || '',
     });
 
     setSelectedSavedId(saved.id || saved._id || 'default');
@@ -201,7 +201,8 @@ export default function Checkout() {
         address.phone &&
         address.line1 &&
         address.city &&
-        address.pincode
+        address.pincode &&
+        address.country
     );
   }
 
@@ -281,7 +282,7 @@ export default function Checkout() {
     if (step === 0 && !addressValid()) {
       setAttempted(true);
       setFormError(
-        'Please fill in name, phone, address, city and pincode.'
+        'Please fill in name, phone, address, city, ZIP / postal code and country.'
       );
 
       return;
@@ -405,8 +406,8 @@ export default function Checkout() {
                       <Field id="co-line1" label="Address" required autoComplete="address-line1" className="sm:col-span-2" value={address.line1} invalid={req('line1')} onChange={(v) => updateField('line1', v)} />
                       <Field id="co-city" label="City" required autoComplete="address-level2" value={address.city} invalid={req('city')} onChange={(v) => updateField('city', v)} />
                       <Field id="co-state" label="State" autoComplete="address-level1" value={address.state} onChange={(v) => updateField('state', v)} />
-                      <Field id="co-pin" label="PIN code" required inputMode="numeric" autoComplete="postal-code" value={address.pincode} invalid={req('pincode')} onChange={(v) => updateField('pincode', v)} />
-                      <Field id="co-country" label="Country" autoComplete="country-name" value={address.country} onChange={(v) => updateField('country', v)} />
+                      <Field id="co-pin" label="ZIP / Postal code" required inputMode="numeric" autoComplete="postal-code" value={address.pincode} invalid={req('pincode')} onChange={(v) => updateField('pincode', v)} />
+                      <Field id="co-country" label="Country" required autoComplete="country-name" value={address.country} onChange={(v) => updateField('country', v)} />
                     </div>
                   )}
                 </div>
@@ -418,13 +419,13 @@ export default function Checkout() {
                   <RadioCard
                     active={shipMethod === 'standard'} onClick={() => setShipMethod('standard')}
                     title="Standard shipping"
-                    sub={`${company.shipping.deliveryMinDays}–${company.shipping.deliveryMaxDays} business days · ${freeShippingThreshold > 0 && cartSubtotal > freeShippingThreshold ? 'Free' : rupee(standardRate)}`}
+                    sub={`${company.shipping.deliveryMinDays}–${company.shipping.deliveryMaxDays} business days · ${freeShippingThreshold > 0 && cartSubtotal > freeShippingThreshold ? 'Free' : money(standardRate)}`}
                     icon={FiTruck}
                   />
                   <RadioCard
                     active={shipMethod === 'express'} onClick={() => setShipMethod('express')}
                     title="Express shipping"
-                    sub={`Faster delivery · ${rupee(expressRate)}`}
+                    sub={`Faster delivery · ${money(expressRate)}`}
                     icon={FiPackage}
                   />
                 </div>
@@ -456,7 +457,7 @@ export default function Checkout() {
                     ) : (
                       <>
                         <FiLock size={16} aria-hidden="true" className="mt-0.5 flex-none text-walnut" />
-                        <span>Payment is taken securely by PayPal in the final step. Your total is shown in rupees; PayPal shows the exact amount in {methods?.paypal?.currency || 'your payment currency'} before you confirm.</span>
+                        <span>Payment is taken securely by PayPal in the final step. Your total is shown and charged in US Dollars (USD).</span>
                       </>
                     )}
                   </p>
@@ -470,17 +471,17 @@ export default function Checkout() {
                     {cart.map((item) => (
                       <li key={item.id} className="flex justify-between gap-4 border-b border-line py-3">
                         <span>{item.name}{item.length ? ` · ${item.length}"` : ''}{item.color ? ` · ${item.color}` : ''} × {item.qty}</span>
-                        <span className="tabular-nums">{rupee(item.price * item.qty)}</span>
+                        <span className="tabular-nums">{money(item.price * item.qty)}</span>
                       </li>
                     ))}
                   </ul>
                   <SummaryRows rows={[
-                    { label: 'Subtotal', value: rupee(cartSubtotal) },
-                    appliedCoupon && { label: `Coupon (${appliedCoupon.code})`, value: `−${rupee(discountAmount)}`, save: true },
-                    { label: `Shipping (${ship})`, value: shippingCost === 0 ? 'Free' : rupee(shippingCost) },
+                    { label: 'Subtotal', value: money(cartSubtotal) },
+                    appliedCoupon && { label: `Coupon (${appliedCoupon.code})`, value: `−${money(discountAmount)}`, save: true },
+                    { label: `Shipping (${ship})`, value: shippingCost === 0 ? 'Free' : money(shippingCost) },
                     { label: 'Payment method', value: PAYMENT_OPTIONS.find((option) => option.id === payMethod)?.title || payMethod },
                     { label: 'Deliver to', value: `${address.fullName}, ${address.city} ${address.pincode}` },
-                    { label: 'Total', value: rupee(total), strong: true },
+                    { label: 'Total', value: money(total), strong: true },
                   ]} />
                 </div>
               )}
@@ -490,7 +491,7 @@ export default function Checkout() {
 
             {pending && methods?.paypal?.enabled && (
               <div className="mt-[18px] grid gap-3 rounded-lg border border-line bg-white p-5">
-                <p className="m-0 text-[0.9rem] text-muted">Order <strong className="text-espresso">{pending.orderNumber}</strong> is reserved for you. Total payable: <strong className="text-espresso">{rupee(pending.total)}</strong></p>
+                <p className="m-0 text-[0.9rem] text-muted">Order <strong className="text-espresso">{pending.orderNumber}</strong> is reserved for you. Total payable: <strong className="text-espresso">{money(pending.total)}</strong></p>
                 <PayPalButtons
                   clientId={methods.paypal.clientId}
                   currency={methods.paypal.currency}
@@ -523,16 +524,16 @@ export default function Checkout() {
                     <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-espresso px-[5px] text-[0.7rem] font-semibold tabular-nums text-cream">{item.qty}</span>
                   </span>
                   <span className="text-[0.9rem] leading-snug text-ink">{item.name}</span>
-                  <span className="text-[0.92rem] font-semibold tabular-nums">{rupee(item.price * item.qty)}</span>
+                  <span className="text-[0.92rem] font-semibold tabular-nums">{money(item.price * item.qty)}</span>
                 </li>
               ))}
             </ul>
             <SummaryRows className="mt-5 border-t border-line pt-[18px]" rows={[
-              { label: 'Subtotal', value: rupee(cartSubtotal) },
-              appliedCoupon && { label: `Coupon (${appliedCoupon.code})`, value: `−${rupee(discountAmount)}`, save: true },
-              { label: 'Shipping', value: shippingCost === 0 ? 'Free' : rupee(shippingCost) },
+              { label: 'Subtotal', value: money(cartSubtotal) },
+              appliedCoupon && { label: `Coupon (${appliedCoupon.code})`, value: `−${money(discountAmount)}`, save: true },
+              { label: 'Shipping', value: shippingCost === 0 ? 'Free' : money(shippingCost) },
             ]} />
-            <SummaryTotal>{rupee(total)}</SummaryTotal>
+            <SummaryTotal>{money(total)}</SummaryTotal>
             <p className="m-0 flex max-w-none items-center justify-center gap-2 text-[0.82rem] text-muted"><FiLock size={14} className="text-gold" aria-hidden="true" /> Secure checkout</p>
           </SummaryCard>
         </Container>

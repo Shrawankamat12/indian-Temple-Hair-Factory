@@ -419,10 +419,10 @@ export default function SiteContentEditor() {
           {tab === 'header' && (
             <div className="max-w-2xl flex flex-col gap-4">
               <Switch checked={values.header.announcementEnabled} onChange={(v) => set('header.announcementEnabled', v)} label="Show announcement bar above the header" />
-              <FormField label="Announcement Text"><Input value={values.header.announcementText} onChange={(e) => set('header.announcementText', e.target.value)} placeholder="Free shipping on orders over ₹15,000" /></FormField>
+              <FormField label="Announcement Text"><Input value={values.header.announcementText} onChange={(e) => set('header.announcementText', e.target.value)} placeholder="Free shipping on orders over $200" /></FormField>
               <FormField label="Announcement Link (optional)"><Input value={values.header.announcementLink} onChange={(e) => set('header.announcementLink', e.target.value)} placeholder="/shop" /></FormField>
               <FormField label="Announcement Bar Messages" hint="Press Enter to add. Up to 3 are shown side by side on desktop and rotate on mobile.">
-                <TagInput value={values.announcements} onChange={(v) => set('announcements', v)} placeholder="e.g. Free shipping on orders above ₹15,000" />
+                <TagInput value={values.announcements} onChange={(v) => set('announcements', v)} placeholder="e.g. Free shipping on orders above $200" />
               </FormField>
             </div>
           )}

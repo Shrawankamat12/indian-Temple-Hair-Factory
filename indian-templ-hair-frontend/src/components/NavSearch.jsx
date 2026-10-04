@@ -4,7 +4,7 @@ import { FiSearch } from 'react-icons/fi';
 import { productsApi } from '../lib/resources';
 import { normalizeProduct } from '../lib/normalize';
 import { resolveImageUrl } from '../lib/api';
-import { rupee } from '../lib/format';
+import { money } from '../lib/format';
 import { cx, linkU } from '../lib/ui';
 
 /**
@@ -82,7 +82,7 @@ export default function NavSearch({ className = '' }) {
                 {p.image && <img src={resolveImageUrl(p.image)} alt="" className="size-full object-cover" />}
               </span>
               <span className="text-[0.9rem] text-espresso">{p.name}</span>
-              <span className="font-sans text-[0.88rem] font-bold tabular-nums">{rupee(p.price)}</span>
+              <span className="font-sans text-[0.88rem] font-bold tabular-nums">{money(p.price)}</span>
             </Link>
           ))}
           {!busy && items.length === 0 && <p className="px-1 py-3 text-[0.9rem] text-muted">No matches yet. Press Enter to search the full catalogue.</p>}

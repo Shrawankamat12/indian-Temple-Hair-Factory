@@ -10,11 +10,8 @@ const paymentConfigSchema = new mongoose.Schema(
     paypalClientSecretEnc: { type: String, default: '', select: false },
     paypalWebhookId: { type: String, trim: true, default: '' },
 
-    // Catalogue prices are stored in INR. PayPal India accounts are for receiving international payments
-    // and generally cannot charge buyers in INR, so the charge currency and the INR→charge-currency
-    // rate are admin-controlled. The backend does the conversion; the browser never does.
+    // Catalogue, shipping, coupons and order totals are all in US dollars; PayPal charges the same USD amount.
     currency: { type: String, uppercase: true, trim: true, default: 'USD' },
-    inrPerUnit: { type: Number, min: 0, default: 0 }, // e.g. 84 means 1 USD = ₹84. Required when currency != INR.
   },
   { timestamps: true }
 );

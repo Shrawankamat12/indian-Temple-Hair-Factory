@@ -21,7 +21,7 @@ import Button from '../components/Button';
 import { LineSkeleton } from '../components/Skeletons';
 import { EmptyState, ErrorState } from '../components/StateBlocks';
 import { useStore } from '../context/StoreContext';
-import { rupee } from '../lib/format';
+import { money } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
 import { authApi, ordersApi, usersApi } from '../lib/resources';
 import Container from '../components/Container';
@@ -185,12 +185,12 @@ export default function Account() {
                           <span className="flex min-w-0 flex-1 flex-col">
                             <strong className="truncate text-espresso">{o.orderNumber}</strong>
                             <span className="text-[0.84rem] text-muted">
-                              {new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              {new Date(o.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
                               , {o.items?.length || 0} item{(o.items?.length || 0) === 1 ? '' : 's'}
                             </span>
                           </span>
                           <StatusPill status={o.orderStatus} />
-                          <span className="ml-auto w-24 text-right font-bold tabular-nums text-espresso sm:ml-0">{rupee(o.pricing?.grandTotal ?? 0)}</span>
+                          <span className="ml-auto w-24 text-right font-bold tabular-nums text-espresso sm:ml-0">{money(o.pricing?.grandTotal ?? 0)}</span>
                           <FiChevronRight className="hidden flex-none text-muted sm:block" aria-hidden="true" />
                         </Link>
                       </li>
@@ -209,7 +209,7 @@ export default function Account() {
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-[18px]">
                       <div>
                         <p className="m-0 font-bold text-espresso">Order {trackingOrder.orderNumber}</p>
-                        <p className="m-0 mt-0.5 text-[0.88rem] tabular-nums text-muted">{rupee(trackingOrder.pricing?.grandTotal ?? 0)}, {trackingOrder.items?.length || 0} item(s)</p>
+                        <p className="m-0 mt-0.5 text-[0.88rem] tabular-nums text-muted">{money(trackingOrder.pricing?.grandTotal ?? 0)}, {trackingOrder.items?.length || 0} item(s)</p>
                       </div>
                       <StatusPill status={trackingOrder.orderStatus} />
                     </div>
@@ -286,7 +286,7 @@ export default function Account() {
                         <Link to={`/product/${p.id}`} className="flex flex-col gap-1.5">
                           <PhotoBlock tone={p.tone} ratio="4/5" rounded={8} src={resolveImageUrl(p.image)} alt={p.name} />
                           <span className="mt-1.5 font-display text-espresso">{p.name}</span>
-                          {p.price != null && <span className="text-[0.92rem] font-bold tabular-nums">{rupee(p.price)}</span>}
+                          {p.price != null && <span className="text-[0.92rem] font-bold tabular-nums">{money(p.price)}</span>}
                         </Link>
                       </li>
                     ))}
@@ -303,7 +303,7 @@ export default function Account() {
                     <p className="m-0 truncate font-bold text-espresso">{profileForm.name || user.name || 'Add your name'}</p>
                     <p className="m-0 truncate text-[0.84rem] text-muted">{user.email}</p>
                     {profile?.createdAt && (
-                      <p className="mt-1.5 text-[0.82rem] font-medium text-walnut">Member since {new Date(profile.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</p>
+                      <p className="mt-1.5 text-[0.82rem] font-medium text-walnut">Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
                     )}
                   </div>
                 </div>

@@ -1,12 +1,12 @@
 import { FiTruck, FiRefreshCw, FiLock, FiGlobe, FiShield, FiTag, FiAward } from 'react-icons/fi';
-import { FaRupeeSign } from 'react-icons/fa';
+import { FaDollarSign } from 'react-icons/fa';
 
 // Picks an icon by keyword from an admin-written label, so editing a badge in the admin
 // (Website Content → Hero Banner → Badges) never needs a code change.
 const RULES = [
   [/human|remy|hair|temple|authentic|virgin|raw/i, 'hair'],
   [/ship|deliver|dispatch/i, FiTruck],
-  [/cod|cash/i, FaRupeeSign],
+  [/cod|cash/i, FaDollarSign],
   [/return|refund|exchange/i, FiRefreshCw],
   [/secure|payment|razorpay|safe|checkout/i, FiLock],
   [/export|world|global|international/i, FiGlobe],

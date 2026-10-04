@@ -7,18 +7,15 @@ class CartService extends BaseService {
     super(cartRepository, 'Cart');
   }
 
-  // Populates items.product, then resolves each item's `variant` (an id
-  // pointing into product.variants) into the actual variant subdocument.
-  // Mongoose's populate() only knows how to follow the `product` ref — it
-  // has no idea `variant` is an id into product.variants, so that part has
-  // to be done by hand.
-  //
-  // Defensive: handles product.variants as either a Mongoose subdocument
-  // array (has .id()) or a plain array (falls back to a manual find), and
-  // never throws — worst case a variant just resolves to null instead of
-  // crashing the whole add-to-cart request.
+  
   async _populateAndResolve(cart) {
     await cart.populate('items.product');
+    // Drop (and save the removal of) rows whose product no longer exists, so the cart never shows blank $0.00 lines.
+    const live = cart.items.filter((i) => i.product);
+    if (live.length !== cart.items.length) {
+      cart.items = live;
+      await cart.save();
+    }
     const plain = cart.toObject();
     plain.items = plain.items.map((item, idx) => {
       let variant = null;

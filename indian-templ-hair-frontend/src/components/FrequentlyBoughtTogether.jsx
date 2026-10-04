@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import PhotoBlock from './PhotoBlock';
 import Button from './Button';
 import { Check } from './Field';
-import { rupee } from '../lib/format';
+import { money } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
 import { useStore } from '../context/StoreContext';
 import { cardCls } from '../lib/ui';
@@ -40,7 +40,7 @@ export default function FrequentlyBoughtTogether({ product, pool }) {
             <div className="w-[120px] sm:w-[150px]">
               <PhotoBlock tone={p.tone} ratio="4/5" rounded={8} src={resolveImageUrl(p.image)} alt={p.name} />
               <p className="mb-0.5 mt-2 line-clamp-2 text-[0.8rem] leading-[1.35] text-ink">{p.name}</p>
-              <span className="font-sans text-[0.95rem] font-bold tabular-nums text-espresso">{rupee(p.price)}</span>
+              <span className="font-sans text-[0.95rem] font-bold tabular-nums text-espresso">{money(p.price)}</span>
             </div>
             {i < all.length - 1 && <span className="px-1.5 font-display text-[1.6rem] text-walnut" aria-hidden="true">+</span>}
           </div>
@@ -50,13 +50,13 @@ export default function FrequentlyBoughtTogether({ product, pool }) {
       <div className="my-[22px] grid gap-2.5 border-y border-line py-[18px]">
         {all.map((p) => (
           <Check key={p.id} checked={checked.has(p.id)} onChange={() => toggle(p.id)}>
-            {p.name}, <strong className="tabular-nums">{rupee(p.price)}</strong>
+            {p.name}, <strong className="tabular-nums">{money(p.price)}</strong>
           </Check>
         ))}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3.5">
-        <span>Total for {selected.length} item{selected.length !== 1 ? 's' : ''}: <strong className="font-sans text-lg font-bold tabular-nums text-espresso">{rupee(total)}</strong></span>
+        <span>Total for {selected.length} item{selected.length !== 1 ? 's' : ''}: <strong className="font-sans text-lg font-bold tabular-nums text-espresso">{money(total)}</strong></span>
         <Button size="sm" disabled={selected.length === 0} onClick={() => selected.forEach((p) => addToCart(p, 1))}>
           Add {selected.length} to cart
         </Button>

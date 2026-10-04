@@ -10,7 +10,7 @@ import Container from './Container';
 function defaultMessages(company) {
   const t = company.shipping?.freeShippingThreshold;
   const list = [];
-  if (t > 0) list.push(`Free shipping on orders above ₹${Number(t).toLocaleString('en-IN')}`);
+  if (t > 0) list.push(`Free shipping on orders above $${Number(t).toLocaleString('en-US')}`);
   list.push('Worldwide shipping');
   if (company.codEnabled) list.push('Cash on delivery available');
   return list;

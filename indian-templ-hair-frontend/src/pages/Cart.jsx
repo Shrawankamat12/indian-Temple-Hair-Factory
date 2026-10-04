@@ -7,7 +7,7 @@ import Button from '../components/Button';
 import { EmptyState } from '../components/StateBlocks';
 import { useStore } from '../context/StoreContext';
 import { useProducts, useCompanyInfo } from '../hooks/useStoreData';
-import { rupee } from '../lib/format';
+import { money } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
 import Container from '../components/Container';
 import Section from '../components/Section';
@@ -69,7 +69,7 @@ export default function Cart() {
                 <div className="mb-5 rounded-lg border border-line bg-white px-5 py-4">
                   <p className="m-0 flex items-center gap-2 text-[0.88rem] text-espresso">
                     <FiTruck size={16} className="text-gold" aria-hidden="true" />
-                    {toFree > 0 ? <>Add <strong className="tabular-nums">{rupee(toFree)}</strong> more for free shipping.</> : <strong className="text-ok">You've unlocked free shipping!</strong>}
+                    {toFree > 0 ? <>Add <strong className="tabular-nums">{money(toFree)}</strong> more for free shipping.</> : <strong className="text-ok">You've unlocked free shipping!</strong>}
                   </p>
                   <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-sand" role="progressbar" aria-valuenow={freePct} aria-valuemin={0} aria-valuemax={100}>
                     <div className="h-full rounded-full bg-gradient-to-r from-gold to-brand transition-[width] duration-500" style={{ width: `${freePct}%` }} />
@@ -109,8 +109,8 @@ export default function Cart() {
                       </div>
 
                       <div className="col-start-2 flex items-baseline gap-2.5 tabular-nums sm:col-start-auto sm:flex-col sm:items-end sm:gap-0.5 sm:text-right">
-                        <strong className="text-[1.1rem] text-espresso">{rupee(item.price * item.qty)}</strong>
-                        {item.mrp > item.price && <s className="text-[0.84rem] text-muted">{rupee(item.mrp * item.qty)}</s>}
+                        <strong className="text-[1.1rem] text-espresso">{money(item.price * item.qty)}</strong>
+                        {item.mrp > item.price && <s className="text-[0.84rem] text-muted">{money(item.mrp * item.qty)}</s>}
                       </div>
                     </li>
                   ))}
@@ -131,21 +131,21 @@ export default function Cart() {
 
                 {appliedCoupon && (
                   <FormAlert kind="ok" className="mt-3 flex items-center justify-between gap-2.5">
-                    <span>{appliedCoupon.code} applied, you save {rupee(appliedCoupon.discount)}</span>
+                    <span>{appliedCoupon.code} applied, you save {money(appliedCoupon.discount)}</span>
                     <button type="button" className={cx(linkU, 'border-0 bg-transparent')} onClick={() => { clearCoupon(); setCoupon(''); }}>Remove</button>
                   </FormAlert>
                 )}
 
                 <SummaryRows className="mt-5 border-t border-line pt-[18px]" rows={[
-                  { label: 'Subtotal', value: rupee(cartSubtotal) },
-                  discount > 0 && { label: 'Discount on MRP', value: `−${rupee(discount)}`, save: true },
-                  appliedCoupon && { label: `Coupon (${appliedCoupon.code})`, value: `−${rupee(couponDiscount)}`, save: true },
-                  { label: 'Shipping', value: shipping === 0 ? 'Free' : rupee(shipping) },
+                  { label: 'Subtotal', value: money(cartSubtotal) },
+                  discount > 0 && { label: 'Discount on MRP', value: `−${money(discount)}`, save: true },
+                  appliedCoupon && { label: `Coupon (${appliedCoupon.code})`, value: `−${money(couponDiscount)}`, save: true },
+                  { label: 'Shipping', value: shipping === 0 ? 'Free' : money(shipping) },
                 ]} />
 
-                {toFree > 0 && <p className="mt-3.5 rounded-md bg-gold-soft px-3 py-2.5 text-[0.84rem] text-espresso">Add {rupee(toFree)} more for free shipping.</p>}
+                {toFree > 0 && <p className="mt-3.5 rounded-md bg-gold-soft px-3 py-2.5 text-[0.84rem] text-espresso">Add {money(toFree)} more for free shipping.</p>}
 
-                <SummaryTotal>{rupee(total)}</SummaryTotal>
+                <SummaryTotal>{money(total)}</SummaryTotal>
 
                 <Button size="lg" block onClick={() => navigate('/checkout')}>Proceed to Checkout</Button>
 

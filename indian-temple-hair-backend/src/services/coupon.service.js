@@ -33,7 +33,7 @@ class CouponService extends BaseService {
     if (coupon.expiresAt && coupon.expiresAt < new Date()) throw new AppError('Coupon expired', 400);
     if (coupon.startDate && coupon.startDate > new Date()) throw new AppError('Coupon is not active yet', 400);
     if (subtotal < coupon.minOrderValue) {
-      throw new AppError(`Minimum order value ₹${coupon.minOrderValue} required`, 400);
+      throw new AppError(`Minimum order value $${coupon.minOrderValue} required`, 400);
     }
     if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
       throw new AppError('Coupon usage limit reached', 400);

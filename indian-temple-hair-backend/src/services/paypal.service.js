@@ -45,15 +45,15 @@ const ZERO_DECIMAL = new Set(['JPY', 'HUF', 'TWD']);
 const fmt = (n, currency) => (ZERO_DECIMAL.has(currency) ? String(Math.round(n)) : (Math.round(n * 100) / 100).toFixed(2));
 
 /**
- * Converts the order's INR grand total into the PayPal charge amount. This is the only place the charge amount
- * is derived, and it is derived from the stored (server-priced) order, never from anything the browser sends.
+ * Builds the PayPal charge for an order. The whole store is priced in US dollars, so the charge is the stored
+ * grand total as-is (no currency conversion). This is the only place the charge amount is derived, and it is
+ * derived from the stored (server-priced) order, never from anything the browser sends.
  */
 function chargeFor(order, cfg) {
-  const inr = Number(order.pricing?.grandTotal);
-  if (!Number.isFinite(inr) || inr <= 0) throw new AppError('Order total is invalid', 400);
-  if (cfg.currency === 'INR') return { value: fmt(inr, 'INR'), currency: 'INR', rate: null };
-  if (!(cfg.inrPerUnit > 0)) throw new AppError('PayPal is not fully configured (exchange rate missing).', 503);
-  return { value: fmt(inr / cfg.inrPerUnit, cfg.currency), currency: cfg.currency, rate: cfg.inrPerUnit };
+  const total = Number(order.pricing?.grandTotal);
+  if (!Number.isFinite(total) || total <= 0) throw new AppError('Order total is invalid', 400);
+  const currency = (cfg && cfg.currency) || 'USD';
+  return { value: fmt(total, currency), currency, rate: null };
 }
 
 async function createOrder(order, { returnUrl, cancelUrl, brandName } = {}) {

@@ -48,23 +48,23 @@ test('inactive / hidden / out-of-stock / bad quantity', () => {
   assert.throws(() => priceLine(null, { quantity: 1 }), /no longer exists/);
 });
 
-test('shipping comes from settings, with previous built-ins as defaults', () => {
-  const line = priceLine(product({ mrp: 1000, price: 1000 }), { quantity: 1 });
-  assert.equal(computeTotals([line], {}).shippingCharge, 499);
-  assert.equal(computeTotals([line], { shippingMethod: 'express' }).shippingCharge, 999);
+test('shipping comes from settings, with USD built-ins as defaults', () => {
+  const line = priceLine(product({ mrp: 100, price: 100 }), { quantity: 1 });
+  assert.equal(computeTotals([line], {}).shippingCharge, 15);
+  assert.equal(computeTotals([line], { shippingMethod: 'express' }).shippingCharge, 35);
   assert.equal(computeTotals([line], { setting: { flatShippingRate: 250, expressShippingRate: 700 } }).shippingCharge, 250);
   assert.equal(computeTotals([line], { shippingMethod: 'express', setting: { expressShippingRate: 700 } }).shippingCharge, 700);
-  const big = priceLine(product({ mrp: 16000, price: 16000 }), { quantity: 1 });
-  assert.equal(computeTotals([big], {}).shippingCharge, 0); // > 15000 default threshold
-  assert.equal(computeTotals([big], { setting: { freeShippingThreshold: 20000 } }).shippingCharge, 499);
-  assert.equal(computeTotals([big], { setting: { freeShippingThreshold: 0 } }).shippingCharge, 499); // 0 disables free shipping
+  const big = priceLine(product({ mrp: 250, price: 250 }), { quantity: 1 });
+  assert.equal(computeTotals([big], {}).shippingCharge, 0); // > $200 default threshold
+  assert.equal(computeTotals([big], { setting: { freeShippingThreshold: 300 } }).shippingCharge, 15);
+  assert.equal(computeTotals([big], { setting: { freeShippingThreshold: 0 } }).shippingCharge, 15); // 0 disables free shipping
 });
 
 test('grand total = selling subtotal - coupon + shipping + tax, rounded to 2dp', () => {
   const line = priceLine(product({ mrp: 1000, price: 800 }), { quantity: 3 });
-  const t = computeTotals([line], { couponDiscount: 100, setting: { taxRate: 5 } });
+  const t = computeTotals([line], { couponDiscount: 100, setting: { taxRate: 5, freeShippingThreshold: 0 } });
   assert.equal(t.subtotal, 3000); assert.equal(t.productDiscount, 600);
   assert.equal(t.tax, 115); // 5% of (2400-100)
-  assert.equal(t.grandTotal, 2300 + 499 + 115);
+  assert.equal(t.grandTotal, 2300 + 15 + 115);
   assert.equal(shippingConfig({}).taxRate, 0);
 });

@@ -18,12 +18,12 @@ async function getRuntime() {
   // With no saved document, PayPal is enabled as soon as env credentials exist; once an admin has saved the
   // Payments form, their on/off switch is authoritative.
   const enabled = doc ? !!doc.paypalEnabled : !!(clientId && secret);
-  const currency = ((doc && doc.currency) || 'USD').toUpperCase();
-  const inrPerUnit = (doc && doc.inrPerUnit) || 0;
+  // The store sells in US dollars only; PayPal always charges USD.
+  const currency = 'USD';
   return {
     enabled: enabled && !!clientId && !!secret,
     environment: environment === 'live' ? 'live' : 'sandbox',
-    clientId, secret, webhookId, currency, inrPerUnit,
+    clientId, secret, webhookId, currency,
     apiBase: environment === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com',
   };
 }
@@ -37,7 +37,6 @@ async function getAdminView() {
   if (!switchedOn) problems.push('PayPal is switched off, so it is hidden on checkout.');
   if (!r.clientId) problems.push('PayPal Client ID is missing.');
   if (!r.secret) problems.push('PayPal Client Secret is missing.');
-  if (r.currency !== 'INR' && !(r.inrPerUnit > 0)) problems.push(`Exchange rate is missing: enter how many rupees equal 1 ${r.currency}. PayPal stays hidden on checkout until this is set.`);
   return {
     paypalReady: problems.length === 0,
     problems,
@@ -48,7 +47,6 @@ async function getAdminView() {
     paypalWebhookId: r.webhookId,
     hasWebhookId: !!r.webhookId,
     currency: r.currency,
-    inrPerUnit: r.inrPerUnit,
     paypalWebhookUrl: '/api/v1/payments/paypal/webhook',
   };
 }
@@ -62,8 +60,7 @@ async function update(input = {}) {
   if (input.paypalClientSecret) doc.paypalClientSecretEnc = encrypt(String(input.paypalClientSecret).trim());
   if (input.clearClientSecret === true) doc.paypalClientSecretEnc = '';
   if (input.paypalWebhookId !== undefined) doc.paypalWebhookId = String(input.paypalWebhookId).trim();
-  if (input.currency) doc.currency = String(input.currency).trim().toUpperCase();
-  if (input.inrPerUnit !== undefined && input.inrPerUnit !== '') doc.inrPerUnit = Math.max(0, Number(input.inrPerUnit) || 0);
+  doc.currency = 'USD';
   await doc.save();
   return getAdminView();
 }
@@ -71,12 +68,11 @@ async function update(input = {}) {
 /** Public, non-secret description of what the checkout may offer. */
 async function getPublicMethods() {
   const [r, setting] = await Promise.all([getRuntime(), Setting.findOne().lean()]);
-  const convertible = r.currency === 'INR' || r.inrPerUnit > 0;
   return {
     paypal: {
-      enabled: r.enabled && convertible,
+      enabled: r.enabled,
       // Non-secret hint so the checkout can explain a missing option instead of silently showing only COD.
-      unavailableReason: r.enabled && convertible ? '' : (!r.clientId || !r.secret ? 'not_configured' : !r.enabled ? 'disabled' : 'missing_rate'),
+      unavailableReason: r.enabled ? '' : (!r.clientId || !r.secret ? 'not_configured' : 'disabled'),
       clientId: r.enabled ? r.clientId : '', // the Client ID is public by design; the secret never leaves the server
       environment: r.environment,
       currency: r.currency,

@@ -14,7 +14,7 @@ import RecentlyViewed from '../components/RecentlyViewed';
 import Button from '../components/Button';
 import { LineSkeleton, BlockSkeleton } from '../components/Skeletons';
 import { ErrorState } from '../components/StateBlocks';
-import { rupee } from '../lib/format';
+import { money } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
 import { useProduct, useProducts, useProductReviews, useSiteContent, useCompanyInfo } from '../hooks/useStoreData';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
@@ -459,11 +459,11 @@ export default function ProductDetail() {
                 </button>
 
                 <div className="mt-5 flex flex-wrap items-baseline gap-x-3.5 gap-y-2 rounded-2xl bg-[linear-gradient(135deg,#fbf5ea,#f5e9d6)] px-5 py-4">
-                  <span className="font-sans text-[2rem] font-bold tabular-nums tracking-tight text-espresso">{rupee(effectivePrice)}</span>
-                  {onSale && <span className="text-[1.05rem] tabular-nums text-muted line-through">{rupee(product.mrp)}</span>}
+                  <span className="font-sans text-[2rem] font-bold tabular-nums tracking-tight text-espresso">{money(effectivePrice)}</span>
+                  {onSale && <span className="text-[1.05rem] tabular-nums text-muted line-through">{money(product.mrp)}</span>}
                   {onSale && <Badge kind="sale">-{product.discountPct}% off</Badge>}
-                  {saving > 0 && <span className="text-[0.85rem] font-semibold text-ok">You save {rupee(saving)}</span>}
-                  <span className="basis-full text-[0.78rem] text-muted">Inclusive of all taxes.{company.shipping.freeShippingThreshold > 0 && ` Free shipping on orders above ${rupee(company.shipping.freeShippingThreshold)}.`}</span>
+                  {saving > 0 && <span className="text-[0.85rem] font-semibold text-ok">You save {money(saving)}</span>}
+                  <span className="basis-full text-[0.78rem] text-muted">Inclusive of all taxes.{company.shipping.freeShippingThreshold > 0 && ` Free shipping on orders above ${money(company.shipping.freeShippingThreshold)}.`}</span>
                 </div>
 
                 {product.description && <p className="mt-5 max-w-[56ch] text-muted">{product.description}</p>}
@@ -610,7 +610,7 @@ export default function ProductDetail() {
                         { qty: '11+ bundles', off: '15% off', price: Math.round(effectivePrice * 0.85) },
                       ].map((row) => (
                         <tr key={row.qty} className="[&_td]:border-b [&_td]:border-line [&_td]:px-1.5 [&_td]:py-[9px] [&_td:nth-child(2)]:font-semibold [&_td:nth-child(2)]:text-ok">
-                          <td>{row.qty}</td><td>{row.off}</td><td className="tabular-nums">{rupee(row.price)}</td>
+                          <td>{row.qty}</td><td>{row.off}</td><td className="tabular-nums">{money(row.price)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -660,7 +660,7 @@ export default function ProductDetail() {
                 )}
                 {tab === 'Shipping' && (
                   <div className="grid gap-4">
-                    <p className="text-ink">{product.shippingInfo || `Orders arrive in ${company.shipping.deliveryMinDays}–${company.shipping.deliveryMaxDays} business days.${company.shipping.freeShippingThreshold > 0 ? ` Free shipping on orders above ${rupee(company.shipping.freeShippingThreshold)}.` : ''}`}</p>
+                    <p className="text-ink">{product.shippingInfo || `Orders arrive in ${company.shipping.deliveryMinDays}–${company.shipping.deliveryMaxDays} business days.${company.shipping.freeShippingThreshold > 0 ? ` Free shipping on orders above ${money(company.shipping.freeShippingThreshold)}.` : ''}`}</p>
                     
                   </div>
                 )}
@@ -766,8 +766,8 @@ export default function ProductDetail() {
       {/* Mobile sticky buy bar */}
       <div className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-between gap-3 border-t border-line bg-white/95 py-2.5 pl-4 pr-[84px] shadow-[0_-10px_30px_-18px_rgb(30_20_16/0.35)] backdrop-blur lg:hidden">
         <div className="min-w-0">
-          <div className="font-sans text-lg font-bold tabular-nums leading-tight text-espresso">{rupee(effectivePrice)}</div>
-          {onSale && <div className="text-[0.74rem] tabular-nums text-muted line-through">{rupee(product.mrp)}</div>}
+          <div className="font-sans text-lg font-bold tabular-nums leading-tight text-espresso">{money(effectivePrice)}</div>
+          {onSale && <div className="text-[0.74rem] tabular-nums text-muted line-through">{money(product.mrp)}</div>}
         </div>
         <Button className="flex-1" onClick={() => addToCart(cartItem, qty)}>Add to Cart</Button>
       </div>

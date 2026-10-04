@@ -241,7 +241,7 @@ export default function OrderInvoice() {
               )}
               <div className="flex justify-between py-1"><span className="text-ink-faint">Shipping</span><span>{formatCurrency(pricing.shippingCharge || 0)}</span></div>
               {pricing.tax > 0 && (
-                <div className="flex justify-between py-1"><span className="text-ink-faint">Tax (GST)</span><span>{formatCurrency(pricing.tax)}</span></div>
+                <div className="flex justify-between py-1"><span className="text-ink-faint">Tax</span><span>{formatCurrency(pricing.tax)}</span></div>
               )}
               <div className="flex justify-between py-2 border-t border-border-soft mt-1 font-bold text-lg text-ink"><span>Grand Total</span><span>{formatCurrency(pricing.grandTotal)}</span></div>
             </div>

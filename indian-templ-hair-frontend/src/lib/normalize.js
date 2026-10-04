@@ -142,7 +142,7 @@ export function normalizeBlog(b) {
     cat: b.category,
     excerpt: b.excerpt,
     content: b.content,
-    date: b.publishedAt ? new Date(b.publishedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+    date: b.publishedAt ? new Date(b.publishedAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
     img: b.image,
   };
 }
@@ -180,6 +180,6 @@ export function normalizeReview(r) {
     comment: r.comment,
     verified: !!r.verifiedPurchase,
     reply: r.reply || '',
-    date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+    date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
   };
 }

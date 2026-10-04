@@ -3,7 +3,7 @@ import { FiHeart, FiEye, FiColumns, FiShoppingBag, FiImage } from 'react-icons/f
 import StarRating from './StarRating';
 import Button from './Button';
 import Badge from './Badge';
-import { rupee } from '../lib/format';
+import { money } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
 import { useStore } from '../context/StoreContext';
 import { useCompare } from '../context/CompareContext';
@@ -114,8 +114,8 @@ export default function ProductCard({ product, onQuickView, view = 'grid', compa
         <div className={cx('mt-auto flex flex-col gap-3', compact ? 'pt-0' : 'pt-2', list && 'mt-2 max-w-80')}>
           {/* FIX: "21% off" chip hata diya, kyunki image par "-21%" badge pehle se hai */}
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className={cx('font-sans font-bold tabular-nums text-espresso', compact ? 'text-[0.95rem]' : 'text-[1.08rem]')}>{rupee(product.price)}</span>
-            {onSale && <span className="text-[0.85rem] tabular-nums text-muted line-through">{rupee(product.mrp)}</span>}
+            <span className={cx('font-sans font-bold tabular-nums text-espresso', compact ? 'text-[0.95rem]' : 'text-[1.08rem]')}>{money(product.price)}</span>
+            {onSale && <span className="text-[0.85rem] tabular-nums text-muted line-through">{money(product.mrp)}</span>}
           </div>
           {compact ? null : product.hasVariants ? (
             <Button to={href} variant="dark" size="sm" block className="min-h-10 tracking-[0.08em]">Select Options</Button>

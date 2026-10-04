@@ -12,7 +12,7 @@ import { SummaryRows } from '../components/SummaryCard';
 import { useStore } from '../context/StoreContext';
 import { ordersApi } from '../lib/resources';
 import { resolveImageUrl } from '../lib/api';
-import { rupee } from '../lib/format';
+import { money } from '../lib/format';
 import { cardCls, cx } from '../lib/ui';
 
 /** Single order view. Route: /account/orders/:id (links from the Account → Orders list). */
@@ -39,7 +39,7 @@ export default function OrderDetail() {
 
   return (
     <>
-      <PageTitle sub={order ? `Placed on ${new Date(order.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}` : undefined}>
+      <PageTitle sub={order ? `Placed on ${new Date(order.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })}` : undefined}>
         {order ? `Order ${order.orderNumber}` : 'Order details'}
       </PageTitle>
       <Section tight>
@@ -69,7 +69,7 @@ export default function OrderDetail() {
                           Qty {it.quantity}{it.variant?.length ? ` · ${it.variant.length}` : ''}{it.variant?.colour ? ` · ${it.variant.colour}` : ''}{it.variant?.texture ? ` · ${it.variant.texture}` : ''}{it.variant?.density ? ` · ${it.variant.density}` : ''}{it.variant?.laceType ? ` · ${it.variant.laceType}` : ''}
                         </span>
                       </span>
-                      <span className="font-semibold tabular-nums">{rupee(it.total ?? it.finalPrice * it.quantity)}</span>
+                      <span className="font-semibold tabular-nums">{money(it.total ?? it.finalPrice * it.quantity)}</span>
                     </li>
                   ))}
                 </ul>
@@ -79,12 +79,12 @@ export default function OrderDetail() {
                 <div className={cx(cardCls, 'p-5 sm:p-6')}>
                   <h3 className="mb-3 text-[1.15rem]">Summary</h3>
                   <SummaryRows rows={[
-                    { label: 'Subtotal', value: rupee(p.subtotal ?? 0) },
-                    p.tax > 0 && { label: 'Tax', value: rupee(p.tax) },
-                    p.productDiscount > 0 && { label: 'Product discount', value: `−${rupee(p.productDiscount)}`, save: true },
-                    p.couponDiscount > 0 && { label: 'Coupon', value: `−${rupee(p.couponDiscount)}`, save: true },
-                    { label: 'Shipping', value: p.shippingCharge ? rupee(p.shippingCharge) : 'Free' },
-                    { label: 'Total', value: rupee(p.grandTotal ?? 0), strong: true },
+                    { label: 'Subtotal', value: money(p.subtotal ?? 0) },
+                    p.tax > 0 && { label: 'Tax', value: money(p.tax) },
+                    p.productDiscount > 0 && { label: 'Product discount', value: `−${money(p.productDiscount)}`, save: true },
+                    p.couponDiscount > 0 && { label: 'Coupon', value: `−${money(p.couponDiscount)}`, save: true },
+                    { label: 'Shipping', value: p.shippingCharge ? money(p.shippingCharge) : 'Free' },
+                    { label: 'Total', value: money(p.grandTotal ?? 0), strong: true },
                   ]} />
                 </div>
                 {addr && (

@@ -173,10 +173,10 @@ const orderSchema = new Schema(
         enum: ['pending', 'processing', 'paid', 'failed', 'cancelled', 'refunded', 'partially_refunded'],
         default: 'pending',
       },
-      // Amount actually charged by the gateway (may be in a different currency than the INR catalogue).
+      // Amount actually charged by the gateway (USD, same as the catalogue).
       amount: { type: Number },
       currency: { type: String },
-      exchangeRate: { type: Number }, // INR per 1 unit of `currency` used at order time (null when currency is INR)
+      exchangeRate: { type: Number }, // legacy field from the INR days; always null now (no conversion)
       paidAt: { type: Date },
       failureReason: { type: String },
       transactionId: { type: String },

@@ -7,7 +7,7 @@ import Overlay from './Overlay';
 import Button from './Button';
 import Badge from './Badge';
 import { Check } from './Field';
-import { rupee } from '../lib/format';
+import { money } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
 import { useStore } from '../context/StoreContext';
 import { useCompare } from '../context/CompareContext';
@@ -59,8 +59,8 @@ export default function QuickView({ product, onClose }) {
                   <span>{product.rating > 0 && product.reviews > 0 ? `${Number(product.rating).toFixed(1)} (${product.reviews} ${product.reviews === 1 ? 'review' : 'reviews'})` : 'Write a review'}</span>
                 </Link>
                 <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-                  <span className="font-sans text-2xl font-bold tabular-nums text-espresso">{rupee(product.price)}</span>
-                  {onSale && <span className="text-[0.88rem] tabular-nums text-muted line-through">{rupee(product.mrp)}</span>}
+                  <span className="font-sans text-2xl font-bold tabular-nums text-espresso">{money(product.price)}</span>
+                  {onSale && <span className="text-[0.88rem] tabular-nums text-muted line-through">{money(product.mrp)}</span>}
                   {onSale && <span className="text-[0.78rem] font-bold text-sale">-{product.discountPct}%</span>}
                 </div>
                 {product.description && (

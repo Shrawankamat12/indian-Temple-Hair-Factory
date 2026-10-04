@@ -18,7 +18,7 @@ const makeContent = (company) => ({
     title: 'Shipping Policy',
     body: [
       ['Shipping Timelines', `Delivery usually takes ${company.shipping.deliveryMinDays}–${company.shipping.deliveryMaxDays} business days. International and export shipments depend on the destination and customs clearance.`],
-      ['Shipping Costs', (() => { const sh = company.shipping; const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`; return `${sh.freeShippingThreshold > 0 ? `Orders above ${inr(sh.freeShippingThreshold)} ship free. Below that, a ${inr(sh.standardRate)} standard shipping fee applies. ` : `Standard shipping is ${inr(sh.standardRate)}. `}Express shipping is ${inr(sh.expressRate)}.`; })()],
+      ['Shipping Costs', (() => { const sh = company.shipping; const inr = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; return `${sh.freeShippingThreshold > 0 ? `Orders above ${inr(sh.freeShippingThreshold)} ship free. Below that, a ${inr(sh.standardRate)} standard shipping fee applies. ` : `Standard shipping is ${inr(sh.standardRate)}. `}Express shipping is ${inr(sh.expressRate)}.`; })()],
       ['International / Export Orders', 'Wholesale and export shipments are quoted individually based on destination, weight and Incoterms (FOB / CIF). Contact our export desk for a shipping quote.'],
       ['Customs & Duties', 'International buyers are responsible for any customs duties, taxes or import fees levied by their destination country.'],
       ['Order Tracking', 'A tracking number is shared by email once your order ships. You can also track orders from your account dashboard.'],
@@ -58,7 +58,7 @@ const makeContent = (company) => ({
     title: 'Terms of Service',
     body: [
       ['Use of This Site', 'By placing an order, you confirm the information provided is accurate and that you are authorised to make the purchase.'],
-      ['Pricing & Payment', 'Prices are listed in Indian Rupees (₹) and may change without prior notice. Online payments are processed securely by PayPal and may be charged in another currency; PayPal shows the exact amount before you confirm. Wholesale pricing requires a separate agreement.'],
+      ['Pricing & Payment', 'All prices are listed in US Dollars (USD) and may change without prior notice. Online payments are processed securely by PayPal and are charged in USD. Wholesale pricing requires a separate agreement.'],
       ['Product Descriptions', 'We aim for accuracy in every product description; minor natural variation in hair texture and colour between batches should be expected.'],
       ['Limitation of Liability', `${company.brandName} is not liable for indirect or consequential damages arising from product use beyond the value of the order.`],
     ],

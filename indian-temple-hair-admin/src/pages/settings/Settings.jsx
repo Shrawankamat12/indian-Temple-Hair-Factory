@@ -32,7 +32,7 @@ const empty = {
   facebook: '', instagram: '', linkedin: '', youtube: '', tiktok: '', twitter: '', pinterest: '',
 };
 
-const emptyPay = { paypalEnabled: false, paypalEnvironment: 'sandbox', paypalClientId: '', paypalClientSecret: '', hasClientSecret: false, paypalWebhookId: '', currency: 'USD', inrPerUnit: '' };
+const emptyPay = { paypalEnabled: false, paypalEnvironment: 'sandbox', paypalClientId: '', paypalClientSecret: '', hasClientSecret: false, paypalWebhookId: '', currency: 'USD' };
 
 export default function Settings() {
   const [tab, setTab] = useState('business');
@@ -118,21 +118,21 @@ export default function Settings() {
 
           {tab === 'shipping' && (
             <div className="grid grid-cols-2 gap-4">
-              {text('flatShippingRate', 'Standard Shipping Rate (₹)', { type: 'number', min: 0 })}
-              {text('expressShippingRate', 'Express Shipping Rate (₹)', { type: 'number', min: 0 })}
-              <FormField label="Free Shipping Above (₹)" hint="0 turns free shipping off. Used by cart, checkout and the server."><Input type="number" min={0} value={values.freeShippingThreshold ?? ''} onChange={(e) => set('freeShippingThreshold', e.target.value)} /></FormField>
+              {text('flatShippingRate', 'Standard Shipping Rate ($ USD)', { type: 'number', min: 0 })}
+              {text('expressShippingRate', 'Express Shipping Rate ($ USD)', { type: 'number', min: 0 })}
+              <FormField label="Free Shipping Above ($ USD)" hint="0 turns free shipping off. Used by cart, checkout and the server."><Input type="number" min={0} value={values.freeShippingThreshold ?? ''} onChange={(e) => set('freeShippingThreshold', e.target.value)} /></FormField>
               <div />
               {text('deliveryMinDays', 'Estimated Delivery: Min Days', { type: 'number', min: 0 })}
               {text('deliveryMaxDays', 'Estimated Delivery: Max Days', { type: 'number', min: 0 })}
               <FormField label="Shipping Zones" className="col-span-2" hint="Comma-separated list of serviceable regions"><Textarea value={values.shippingZones || ''} onChange={(e) => set('shippingZones', e.target.value)} /></FormField>
-              <p className="col-span-2 text-[12.5px] text-ink-muted">Leave a rate empty to keep the previous built-in value (standard ₹499, express ₹999, free above ₹15,000). The server recalculates shipping on every order.</p>
+              <p className="col-span-2 text-[12.5px] text-ink-muted">Leave a rate empty to keep the previous built-in value (standard $15, express $35, free above $200). The server recalculates shipping on every order.</p>
             </div>
           )}
 
           {tab === 'payments' && (
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 rounded-md bg-surface-muted p-3 text-[12.5px] text-ink-muted">
-                PayPal for an India-based business is meant for receiving <strong>international</strong> payments, and usually cannot charge buyers in INR. Catalogue prices stay in ₹; the server converts each order total to the currency below using the rate you enter, and creates and captures the PayPal order itself. The Client Secret is stored encrypted and is never shown again or sent to any browser.
+                All prices, shipping rates and coupons in this store are in <strong>US dollars (USD)</strong>, and PayPal charges exactly the order total shown to the customer, with no currency conversion. The server creates and captures the PayPal order itself. The Client Secret is stored encrypted and is never shown again or sent to any browser.
               </div>
               {pay.problems && (
                 <div className={`col-span-2 rounded-md border p-3 text-[12.5px] ${pay.paypalReady ? 'border-green-300 bg-green-50 text-green-800' : 'border-amber-300 bg-amber-50 text-amber-900'}`}>
@@ -148,11 +148,10 @@ export default function Settings() {
               )}
               <div className="col-span-2"><Switch checked={!!pay.paypalEnabled} onChange={(v) => setP('paypalEnabled', v)} label="PayPal enabled" /></div>
               <FormField label="Environment"><Select value={pay.paypalEnvironment} onChange={(e) => setP('paypalEnvironment', e.target.value)}><option value="sandbox">Sandbox (testing)</option><option value="live">Live</option></Select></FormField>
-              <FormField label="Currency charged by PayPal" hint="3-letter code, e.g. USD"><Input value={pay.currency} maxLength={3} onChange={(e) => setP('currency', e.target.value.toUpperCase())} /></FormField>
+              <FormField label="Currency charged by PayPal" hint="Fixed: the whole store is in US dollars."><Input value="USD" readOnly disabled /></FormField>
               <FormField label="PayPal Client ID" className="col-span-2"><Input value={pay.paypalClientId} onChange={(e) => setP('paypalClientId', e.target.value)} /></FormField>
               <FormField label="PayPal Client Secret" className="col-span-2" hint={pay.hasClientSecret ? 'A secret is stored. Leave blank to keep it; type a new one to replace it.' : 'Not set'}><Input type="password" autoComplete="new-password" value={pay.paypalClientSecret} onChange={(e) => setP('paypalClientSecret', e.target.value)} placeholder={pay.hasClientSecret ? '•••••••• (stored)' : ''} /></FormField>
               <FormField label="PayPal Webhook ID" className="col-span-2" hint="From the webhook you create in the PayPal developer dashboard."><Input value={pay.paypalWebhookId} onChange={(e) => setP('paypalWebhookId', e.target.value)} /></FormField>
-              <FormField label={`Exchange rate: ₹ per 1 ${pay.currency || 'unit'}`} hint="Required unless the currency is INR. Update it whenever the rate moves."><Input type="number" min={0} step="0.01" value={pay.inrPerUnit} onChange={(e) => setP('inrPerUnit', e.target.value)} /></FormField>
               <FormField label="Webhook URL to register in PayPal"><Input readOnly value={webhookUrl} onFocus={(e) => e.target.select()} /></FormField>
               <div className="col-span-2 border-t border-border-soft pt-4"><Switch checked={!!values.codEnabled} onChange={(v) => set('codEnabled', v)} label="Cash on Delivery enabled" /></div>
             </div>

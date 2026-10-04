@@ -57,6 +57,12 @@ function normalizeCartItem(item) {
   };
 }
 
+// A cart row whose product was deleted (or has no price) comes back with no id/name/price. Showing it gives a
+// blank "$0.00" line and makes the whole subtotal NaN, so such rows are dropped.
+function isValidCartItem(i) {
+  return !!(i && i.id && i.name && Number.isFinite(Number(i.price)));
+}
+
 
 /* ============================================================
    PROVIDER
@@ -143,6 +149,7 @@ export function StoreProvider({ children }) {
       setCart(
         (res.data?.items || [])
           .map(normalizeCartItem)
+                .filter(isValidCartItem)
       );
     } catch {
       // Guest / unauthenticated user
@@ -375,6 +382,7 @@ export function StoreProvider({ children }) {
             setCart(
               (res.data?.items || [])
                 .map(normalizeCartItem)
+                .filter(isValidCartItem)
             );
           })
           .catch((err) =>
@@ -446,6 +454,7 @@ export function StoreProvider({ children }) {
               setCart(
                 (res.data?.items || [])
                   .map(normalizeCartItem)
+                .filter(isValidCartItem)
               );
             })
             .catch((err) =>
@@ -482,6 +491,7 @@ export function StoreProvider({ children }) {
               setCart(
                 (res.data?.items || [])
                   .map(normalizeCartItem)
+                .filter(isValidCartItem)
               );
             })
             .catch((err) =>
@@ -665,7 +675,7 @@ export function StoreProvider({ children }) {
         cart.reduce(
           (n, i) =>
             n +
-            i.price *
+            (Number(i.price) || 0) *
               i.qty,
           0
         ),

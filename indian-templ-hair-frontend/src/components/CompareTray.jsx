@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { FiX } from 'react-icons/fi';
 import { useCompare } from '../context/CompareContext';
-import { rupee } from '../lib/format';
+import { money } from '../lib/format';
 import { resolveImageUrl } from '../lib/api';
 import StarRating from './StarRating';
 import Overlay from './Overlay';
@@ -16,7 +16,7 @@ export default function CompareTray() {
   if (items.length === 0 && !drawerOpen) return null;
 
   const rows = [
-    { label: 'Price', get: (p) => rupee(p.price) },
+    { label: 'Price', get: (p) => money(p.price) },
     { label: 'Hair type', get: (p) => p.hairType || '—' },
     { label: 'Texture', get: (p) => p.texture || '—' },
     { label: 'Length', get: (p) => (p.length ? `${p.length}"` : '—') },
