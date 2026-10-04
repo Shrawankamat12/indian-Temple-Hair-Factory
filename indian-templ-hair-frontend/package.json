@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm --prefix ../bir-hair-admin install && npm --prefix ../bir-hair-admin run build && rm -rf public/admin && mkdir -p public/admin && cp -r ../bir-hair-admin/dist/. public/admin/ && vite build",
+    "build": "npm --prefix ../indian-temple-hair-admin install && npm --prefix ../indian-temple-hair-admin run build && node -e \"const fs=require('fs'); fs.rmSync('public/admin',{recursive:true,force:true}); fs.cpSync('../indian-temple-hair-admin/dist','public/admin',{recursive:true});\" && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },

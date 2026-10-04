@@ -1,0 +1,1 @@
+var e=e=>`₹`+(e||0).toLocaleString(`en-IN`);export{e as t};
