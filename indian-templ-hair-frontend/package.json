@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm --prefix ../indian-temple-hair-admin install --include=optional --foreground-scripts && npm --prefix ../indian-temple-hair-admin run build && node -e \"const fs=require('fs'); fs.rmSync('public/admin',{recursive:true,force:true}); fs.cpSync('../indian-temple-hair-admin/dist','public/admin',{recursive:true});\" && vite build",
+   "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
