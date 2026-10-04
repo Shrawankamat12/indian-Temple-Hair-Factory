@@ -1,20 +1,10 @@
 {
-"rewrites": [
-{
-"source": "/admin",
-"destination": "/admin/index.html"
-},
-{
-"source": "/admin/",
-"destination": "/admin/index.html"
-},
-{
-"source": "/admin/(.*)",
-"destination": "/admin/index.html"
-},
-{
-"source": "/(.*)",
-"destination": "/index.html"
-}
-]
+  "buildCommand": "node ./node_modules/vite/bin/vite.js build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/admin", "destination": "/admin/index.html" },
+    { "source": "/admin/", "destination": "/admin/index.html" },
+    { "source": "/admin/(.*)", "destination": "/admin/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
