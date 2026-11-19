@@ -12,6 +12,10 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// import.meta.env.BASE_URL = '/admin/' in production (from vite base), '/' in dev if base unset
+const ADMIN_BASE = import.meta.env.BASE_URL.replace(/\/$/, ''); // "/admin"
+const LOGIN_PATH = `${ADMIN_BASE}/login`;
+
 api.interceptors.response.use(
   (res) => res,
   (err) => {
@@ -20,8 +24,8 @@ api.interceptors.response.use(
       // Avoid an infinite reload loop: only force-navigate when we're not
       // already on the login page (getMe() on the login page itself will
       // also 401 for a logged-out visitor — that's expected, not an error).
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      if (window.location.pathname !== LOGIN_PATH) {
+        window.location.href = LOGIN_PATH;
       }
     }
     return Promise.reject(err);

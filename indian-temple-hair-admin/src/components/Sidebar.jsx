@@ -94,7 +94,7 @@ export default function Sidebar({ open, onClose }) {
   return (
     <aside className={`admin-sidebar${open ? ' open' : ''}`}>
       <div className="admin-brand">
-        <img src="/logo.png" alt="Indian Temple Hair Exports" />
+        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Indian Temple Hair Exports" />
         <div className="admin-brand-text">
           <div className="name">Indian Temple Hair</div>
           <span className="tag">Admin Panel</span>

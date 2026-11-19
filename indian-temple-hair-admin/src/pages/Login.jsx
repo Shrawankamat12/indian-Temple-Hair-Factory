@@ -27,7 +27,7 @@ export default function Login() {
       <div className="login-panel">
         <div className="login-panel-inner">
           <div className="login-panel-brand">
-            <img src="/logo.png" alt="Indian Temple Hair Exports" />
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Indian Temple Hair Exports" />
             <span>Indian Temple Hair Exports</span>
           </div>
           <div className="login-panel-copy">
