@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://indian-temple-hair-factory-production.up.railway.app/api/v1',
+  baseURL: import.meta.env.PROD
+    ? 'https://indian-temple-hair-factory-production.up.railway.app/api/v1'
+    : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1'),
   withCredentials: true, // send httpOnly cookie
 });
 
@@ -12,7 +14,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// import.meta.env.BASE_URL = '/admin/' in production (from vite base), '/' in dev if base unset
+// import.meta.env.BASE_URL = '/admin/' in production (from vite base)
 const ADMIN_BASE = import.meta.env.BASE_URL.replace(/\/$/, ''); // "/admin"
 const LOGIN_PATH = `${ADMIN_BASE}/login`;
 
@@ -21,9 +23,6 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem('ith_admin_token');
-      // Avoid an infinite reload loop: only force-navigate when we're not
-      // already on the login page (getMe() on the login page itself will
-      // also 401 for a logged-out visitor — that's expected, not an error).
       if (window.location.pathname !== LOGIN_PATH) {
         window.location.href = LOGIN_PATH;
       }
